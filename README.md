@@ -28,7 +28,9 @@
     |   ├── Temas_de_parciales_ISW_2026.pdf
     |   |
     |   └── Clase_Grabadas_ISW_2021.&lt;Extension&gt;
-    |	
+    |
+    ├── Trabajo de Investigacion Grupal/
+    |
     ├── Trabajos Practicos/
     |   ├── Guias/
     |   |
@@ -37,8 +39,6 @@
     |   ├── TP2/
     |   |
     |   └── TPN/
-    |
-    ├── Trabajo de Investigacion Grupal/
     |
     ├── Programa_Asignatura_ISW_2026.pdf
     ├── Cronograma_ISW_2026.pdf
