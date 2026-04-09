@@ -9,8 +9,7 @@
 | Cavilla, Matias                | 90589  |
 | Costanzo, Franco               | 89478  |
 | De Goycoechea, Mateo           | 85203  |
-| Gorosito, Tamara                 |   |
-| Höhlke, Augusto                |   |
+| Höhlke, Augusto                | 00000  |
 | Romero, Victoria               | 89909  |
 | Romero Justo, Milton Jesus     | 68396  |
 | Sosa, Diego                    | 82397  |
@@ -27,7 +26,7 @@
     |   |
     |   ├── Temas_de_parciales_ISW_2026.pdf
     |   |
-    |   └── Clase_Grabadas_ISW_2021.&lt;Extension&gt;
+    |   └── Clase_Grabadas_ISW_2021.xlsx
     |
     ├── Trabajo de Investigacion Grupal/
     |
