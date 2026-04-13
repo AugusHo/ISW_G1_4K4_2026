@@ -74,3 +74,11 @@
 | ISW                         | 	Ingeniería y Calidad de Software              |
 | TP                          | 	Trabajo Practico                |
 | TED                         | 	Tecnología Entretenimiento y Diseño              |
+
+## Criterio Linea Base
+Como grupo, hemos definido que la línea base se establecerá luego de cada trabajo práctico evaluable, considerándolo como un hito clave dentro de la gestión de configuración de software. En cada una de las instancias, y luego de su correspondiente correción, nos permitirá medir el progreso, consolidar los cambios realizados y garantizar la estabilidad de la versión alcanzada. Cada línea base será identificada mediante la nomenclatura v[MAJOR].[MINOR], asegurando una organización clara y consistente de las versiones.
+
+## Linea Base disponibles
+| Version    | Fecha                      | Descripcion                                              |
+|--------------------------------------|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| v1.0              | 14/04/2026               | Repositorio en su primera versión, con el material disponible en la UV para el cursado de la materia.                     |
