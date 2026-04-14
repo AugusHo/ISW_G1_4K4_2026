@@ -49,15 +49,15 @@
 |--------------------------------------|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | Programa de la materia               | Programa_Asignatura_ISW_2026.pdf                 | ISW_G1_4K4_2026/                                                     |
 | Cronograma de cursada                | Cronograma_ISW_2026.pdf                          | ISW_G1_4K4_2026/                                                     |
-| Presentaciones Teóricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones Teóricas/         |
+| Presentaciones teóricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones Teóricas/         |
 | Bibliografia                         | &lt;Nombre_Tema&gt;-&lt;Nombre_Material&gt;-&lt;Nombre_Autor&gt;.pdf      | ISW_G1_4K4_2026/Materiales de Clase/Bibliografia/    |
 | Templates                            | Template_&lt;Especifiacion&gt;.&lt;Extension&gt;      | ISW_G1_4K4_2026/Materiales de Clase/Templates/    |
-| Temas de Parciales                   | Temas_de_Parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
+| Temas de parciales                   | Temas_de_Parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Clases grabadas                      | Clase_Grabadas_ISW_2021.&lt;Extension&gt;                 | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Guia de ejercicios                   | Guia_&lt;Nombre_Tema&gt;.pdf                | ISW_G1_4K4_2026/Trabajos Practicos/Guias    |
 | Trabajos practicos                   | TP&lt;N&gt;\_&lt;M&gt;\_&lt;Nombre_Tema&gt;\_&lt;TipoResolucion&gt;.&lt;Extension&gt;  | ISW_G1_4K4_2026/Trabajos practicos/TP&lt;N&gt;    |
 | Lineamientos                         | Lineamientos_para_trabajos_de_investigacion.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
-| Charla Ted                           | Planilla_Charla_TED.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
+| Charla TED                           | Planilla_Charla_TED.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
 
 ## Glosario
 | Sigla                                      | Significado                                                                                              |
