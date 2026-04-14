@@ -49,7 +49,7 @@
 |--------------------------------------|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | Programa de la materia               | Programa_Asignatura_ISW_2026.pdf                 | ISW_G1_4K4_2026/                                                     |
 | Cronograma de cursada                | Cronograma_ISW_2026.pdf                          | ISW_G1_4K4_2026/                                                     |
-| Presentaciones teoricas              | &lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones teoricas/         |
+| Presentaciones teoricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones teoricas/         |
 | Bibliografia                         | &lt;Nombre_Tema&gt;-&lt;Nombre_Material&gt;-&lt;Nombre_Autor&gt;.pdf      | ISW_G1_4K4_2026/Materiales de Clase/Bibliografia/    |
 | Templates                            | Template_&lt;Especifiacion&gt;.&lt;Extension&gt;      | ISW_G1_4K4_2026/Materiales de Clase/Templates/    |
 | Temas de parciales                   | Temas_de_parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
@@ -74,6 +74,7 @@
 | ISW                         | 	Ingeniería y Calidad de Software              |
 | TP                          | 	Trabajo Practico                |
 | TED                         | 	Tecnología Entretenimiento y Diseño              |
+| PRE                         | 	Diminutivo de presentación              |
 
 ## Criterio Linea Base
 Como grupo, hemos definido que la línea base se establecerá luego de cada trabajo práctico evaluable, considerándolo como un hito clave dentro de la gestión de configuración de software. En cada una de las instancias, y luego de su correspondiente correción, nos permitirá medir el progreso, consolidar los cambios realizados y garantizar la estabilidad de la versión alcanzada. Cada línea base será identificada mediante la nomenclatura v[MAJOR].[MINOR], asegurando una organización clara y consistente de las versiones.
