@@ -63,7 +63,7 @@
 | Sigla                                      | Significado                                                                                              |
 |--------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | &lt;N&gt;                   | 	N es un número incremental. Ej: 00, 01, n, etc.                 |
-| &lt;Nombre_Presentacion&gt; | 	Nombre de la presentacion/filmina teorica                 |
+| &lt;Nombre_Presentacion&gt; | 	Nombre de la presentación/filmina teórica                 |
 | &lt;Nombre_Tema&gt;         | 	Nombre o título del tema correspondiente                 |
 | &lt;Nombre_Material&gt;     | 	Nombre o título del libro/paper de bibliografía               |
 | &lt;Nombre_Autor&gt;        | 	Nombre del autor del libro correspondiente                |
