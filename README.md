@@ -67,7 +67,7 @@
 | &lt;Nombre_Tema&gt;         | 	Nombre o título del tema correspondiente                 |
 | &lt;Nombre_Material&gt;     | 	Nombre o título del libro/paper de bibliografía               |
 | &lt;Nombre_Autor&gt;        | 	Nombre del autor del libro correspondiente                |
-| &lt;Especificacion&gt;      | 	Especificación/tema al que esta dirijido el template              |
+| &lt;Especificacion&gt;      | 	Especificación/tema al que esta dirigido el template              |
 | &lt;Extension&gt;           |     Nombre de la extensión del archivo, puede estar en diferentes formatos. Ejemplo: .doc, .jpg, .jpeg, .xlsx, .css, .html, .js, etc.              |
 | &lt;M&gt;                   | 	M es un numero incremental, independientemente de N, dentro de un mismo Item de Configuracion. Ej: 00, 01, n, etc.            |
 | &lt;TipoResolucion&gt;      | 	Nombre que idenifica el tipo de resolucion de la actividad, siendo posible 2 valores: ResolucionPropia o ResolucionDeClase             |
