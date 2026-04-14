@@ -20,11 +20,11 @@
     ├── Materiales de Clase/                                                 
     |   ├── Bibliografia/
     |   |                                                       
-    |   ├── Presentaciones teoricas/  
+    |   ├── Presentaciones Teóricas/  
     |   |
     |   ├── Templates/
     |   |
-    |   ├── Temas_de_parciales_ISW_2026.pdf
+    |   ├── Temas_de_Parciales_ISW_2026.pdf
     |   |
     |   └── Clase_Grabadas_ISW_2021.xlsx
     |
@@ -49,10 +49,10 @@
 |--------------------------------------|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | Programa de la materia               | Programa_Asignatura_ISW_2026.pdf                 | ISW_G1_4K4_2026/                                                     |
 | Cronograma de cursada                | Cronograma_ISW_2026.pdf                          | ISW_G1_4K4_2026/                                                     |
-| Presentaciones teoricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones teoricas/         |
+| Presentaciones Teóricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones Teóricas/         |
 | Bibliografia                         | &lt;Nombre_Tema&gt;-&lt;Nombre_Material&gt;-&lt;Nombre_Autor&gt;.pdf      | ISW_G1_4K4_2026/Materiales de Clase/Bibliografia/    |
 | Templates                            | Template_&lt;Especifiacion&gt;.&lt;Extension&gt;      | ISW_G1_4K4_2026/Materiales de Clase/Templates/    |
-| Temas de parciales                   | Temas_de_parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
+| Temas de Parciales                   | Temas_de_Parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Clases grabadas                      | Clase_Grabadas_ISW_2021.&lt;Extension&gt;                 | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Guia de ejercicios                   | Guia_&lt;Nombre_Tema&gt;.pdf                | ISW_G1_4K4_2026/Trabajos Practicos/Guias    |
 | Trabajos practicos                   | TP&lt;N&gt;\_&lt;M&gt;\_&lt;Nombre_Tema&gt;\_&lt;TipoResolucion&gt;.&lt;Extension&gt;  | ISW_G1_4K4_2026/Trabajos practicos/TP&lt;N&gt;    |
