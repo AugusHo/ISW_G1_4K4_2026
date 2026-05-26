@@ -28,7 +28,7 @@
     |   |
     |   └── Clase_Grabadas_ISW_2021.xlsx
     |
-    ├── Trabajo de Investigacion Grupal/
+    ├── Trabajos de Investigacion Grupal/
     |
     ├── Trabajos Practicos/
     |   ├── Guias/
