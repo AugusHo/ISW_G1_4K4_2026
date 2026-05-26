@@ -86,4 +86,6 @@ Cada línea base es marcada mediante un **tag de Git** en el repositorio y utili
 ## Linea Base disponibles
 | Version | Tag de Git | Fecha | Descripcion |
 |---------|------------|-------|-------------|
-| v1.0 | `v1.0` | 14/04/2026 | Línea base inicial del repositorio, con el material disponible en la UV para el cursado de la materia. |
+| v1.0 | `v1.0` | 14/04/2026 | Línea base inicial del repositorio para el TP evaluable 4 |
+| v1.1 | `v1.1` | 26/05/2026 | Corrección del repositorio en base a la retroalimentación de la entrega del TP evaluable 4. |
+
