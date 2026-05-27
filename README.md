@@ -70,7 +70,7 @@
 | &lt;Especificacion&gt;      | 	Especificación/tema al que esta dirigido el template              |
 | &lt;Extension&gt;           |     Nombre de la extensión del archivo, puede estar en diferentes formatos. Ejemplo: .doc, .jpg, .jpeg, .xlsx, .css, .html, .js, etc.              |
 | &lt;M&gt;                   | 	Número incremental que identifica la versión de un mismo Item de Configuración dentro de un Trabajo Práctico. Ej: 01, 02, etc.            |
-| &lt;TipoResolucion&gt;      | 	Nombre que idenifica el tipo de resolucion de la actividad, siendo posible 2 valores: ResolucionPropia o ResolucionDeClase             |
+| &lt;TipoResolucion&gt;      | 	Nombre que idenifica el tipo de resolucion de la actividad, siendo posible 3 valores: ResolucionPropia, ResolucionDeClase o ResolucionGrupal            |
 | ISW                         | 	Ingeniería y Calidad de Software              |
 | TP                          | 	Trabajo Practico                |
 | TED                         | 	Tecnología Entretenimiento y Diseño              |
