@@ -1,49 +1,38 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { api } from './api';
 
 interface Usuario {
+  id: number;
   nombre: string;
   email: string;
 }
 
 interface AuthContextType {
-  user: Usuario | null;
-  token: string | null;
-  login: (tk: string, usuario: Usuario) => void;
-  logout: () => void;
+  user: Usuario;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Usuario hardcodeado: la sesión está "siempre iniciada" para esta entrega del TP.
+// Se sincroniza con el backend vía GET /api/me (mismo usuario id=1).
+const HARDCODED_USER: Usuario = {
+  id: 1,
+  email: 'visitante@ecoharmony.com',
+  nombre: 'Visitante EcoHarmony',
+};
+
+const AuthContext = createContext<AuthContextType>({ user: HARDCODED_USER });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<Usuario | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [user, setUser] = useState<Usuario>(HARDCODED_USER);
 
   useEffect(() => {
-    const u = localStorage.getItem('user');
-    if (u) setUser(JSON.parse(u) as Usuario);
+    api.me()
+      .then((u) => setUser(u as Usuario))
+      .catch(() => { /* offline: dejamos el hardcoded */ });
   }, []);
 
-  const login = (tk: string, usuario: Usuario) => {
-    localStorage.setItem('token', tk);
-    localStorage.setItem('user', JSON.stringify(usuario));
-    setToken(tk);
-    setUser(usuario);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user }}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
+export function useAuth(): AuthContextType {
+  return useContext(AuthContext);
+}

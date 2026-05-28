@@ -1,14 +1,15 @@
 const express = require('express');
 const { CompraError } = require('../services/compraService');
+const { HARDCODED_USER } = require('../db');
 
-function comprasRoutes({ service, auth }) {
+function comprasRoutes({ service }) {
   const router = express.Router();
 
-  router.post('/', auth, async (req, res) => {
+  router.post('/', async (req, res) => {
     try {
       const { fechaVisita, metodoPago, tickets } = req.body || {};
       const result = await service.comprar({
-        usuarioId: req.user.id,
+        usuarioId: HARDCODED_USER.id,
         fechaVisita,
         metodoPago,
         tickets,

@@ -2,12 +2,29 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
+// Usuario hardcodeado que estará "siempre logueado" en la app.
+const HARDCODED_USER = {
+  id: 1,
+  email: 'visitante@ecoharmony.com',
+  nombre: 'Visitante EcoHarmony',
+  contrasena: 'hardcoded',
+};
+
 function createDb(filename = ':memory:') {
   const db = new Database(filename);
   db.pragma('foreign_keys = ON');
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
   return db;
+}
+
+function seedHardcodedUser(db) {
+  const existing = db.prepare('SELECT id FROM Usuarios WHERE id = ?').get(HARDCODED_USER.id);
+  if (!existing) {
+    db.prepare(
+      'INSERT INTO Usuarios (id, email, contrasena, nombre) VALUES (?, ?, ?, ?)'
+    ).run(HARDCODED_USER.id, HARDCODED_USER.email, HARDCODED_USER.contrasena, HARDCODED_USER.nombre);
+  }
 }
 
 function seedReferenceData(db) {
@@ -34,6 +51,8 @@ function seedReferenceData(db) {
     insertTipo.run('VIP', 'VIP', 3200, 'Acceso prioritario');
     insertTipo.run('Regular', 'regular', 1800, 'Entrada estándar');
   }
+
+  seedHardcodedUser(db);
 }
 
-module.exports = { createDb, seedReferenceData };
+module.exports = { createDb, seedReferenceData, seedHardcodedUser, HARDCODED_USER };

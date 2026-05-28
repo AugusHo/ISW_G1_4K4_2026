@@ -3,10 +3,8 @@ const { CompraService } = require('../src/services/compraService');
 
 function buildContext({ today = '2026-06-02' } = {}) {
   const db = createDb(':memory:');
-  seedReferenceData(db);
-  const usuario = db
-    .prepare("INSERT INTO Usuarios (email, contrasena, nombre) VALUES (?, ?, ?)")
-    .run('visitante@test.com', 'hash', 'Visitante');
+  seedReferenceData(db); // siembra horarios, tipos y el usuario hardcodeado id=1
+  const usuario = { lastInsertRowid: 1 };
   const mailer = { sent: [], async send(to, subject, body) { this.sent.push({ to, subject, body }); } };
   const mp = {
     created: [],
@@ -43,7 +41,7 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     expect(result.montoTotal).toBe(3200 + 1800);
     expect(result.redirectUrl).toMatch(/^https:\/\/mp\.test\/checkout\//);
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].to).toBe('visitante@test.com');
+    expect(mailer.sent[0].to).toBe('visitante@ecoharmony.com');
     expect(mailer.sent[0].subject).toMatch(/confirmaci/i);
   });
 
