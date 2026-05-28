@@ -60,7 +60,17 @@ class CompraService {
 
     let redirectUrl = null;
     if (metodoPago === 'tarjeta') {
-      const pref = await this.mp.createPreference({ id: compraId, montoTotal, usuario });
+      const items = tickets.map((t, i) => {
+        const tipo = tipos[t.tipoTicketId];
+        return {
+          id: tipo.id,
+          title: `Entrada ${tipo.nombre} - EcoHarmony Park`,
+          description: `Visitante #${i + 1} (edad ${t.edad}) · visita ${fechaVisita}`,
+          quantity: 1,
+          unit_price: tipo.precio,
+        };
+      });
+      const pref = await this.mp.createPreference({ id: compraId, montoTotal, items, payer: usuario, fechaVisita });
       this.db
         .prepare('UPDATE Compras SET mp_preferencia_id = ? WHERE id = ?')
         .run(pref.id, compraId);
@@ -82,6 +92,39 @@ class CompraService {
       montoTotal,
       metodoPago,
       redirectUrl,
+    };
+  }
+
+  // Consulta el estado de una compra. Para pagos con tarjeta, si el cliente MP
+  // lo soporta, busca el pago real en Mercado Pago (entorno de prueba) y
+  // sincroniza el estado de la compra en la base.
+  async consultarEstado(compraId) {
+    const compra = this.db.prepare('SELECT * FROM Compras WHERE id = ?').get(compraId);
+    if (!compra) throw new CompraError('Compra no encontrada', 404);
+
+    let estadoPago = null;
+    if (compra.metodo_pago === 'tarjeta' && typeof this.mp.buscarEstadoPorReferencia === 'function') {
+      estadoPago = await this.mp.buscarEstadoPorReferencia(compraId);
+      if (estadoPago) {
+        const nuevoEstado =
+          estadoPago === 'approved' ? 'confirmado' :
+          estadoPago === 'rejected' || estadoPago === 'cancelled' ? 'cancelado' :
+          'pendiente';
+        if (nuevoEstado !== compra.estado) {
+          this.db.prepare('UPDATE Compras SET estado = ? WHERE id = ?').run(nuevoEstado, compraId);
+          compra.estado = nuevoEstado;
+        }
+      }
+    }
+
+    return {
+      compraId: compra.id,
+      estado: compra.estado,
+      estadoPago,
+      cantidad: this.db.prepare('SELECT COUNT(*) AS c FROM Tickets WHERE compra_id = ?').get(compraId).c,
+      fechaVisita: compra.fecha_visita,
+      montoTotal: compra.monto_total,
+      metodoPago: compra.metodo_pago,
     };
   }
 
