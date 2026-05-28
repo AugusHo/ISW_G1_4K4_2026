@@ -25,7 +25,7 @@ TP6/
 │   │   └── services/
 │   │       ├── compraService.js        # ← núcleo dirigido por tests
 │   │       ├── mailer.js               # Mailer fake (consola)
-│   │       └── mercadoPago.js          # Cliente MP fake
+│   │       └── mercadoPago.js          # Cliente MP real (TEST) + fake
 │   └── tests/
 │       ├── compraService.test.js       # Tests unitarios (TDD)
 │       └── api.test.js                 # Tests de API (supertest)
@@ -57,6 +57,74 @@ cd frontend
 npm install
 npm run dev      # http://localhost:5173 (proxy a :3001/api)
 ```
+
+## Integración con Mercado Pago (entorno de PRUEBA)
+
+El pago con **tarjeta** usa **Checkout Pro** de Mercado Pago en modo TEST (SDK
+oficial `mercadopago`). El flujo es:
+
+1. El backend crea una **preferencia** (`POST /checkout/preferences`) con los
+   ítems de la compra y devuelve el `init_point`.
+2. El frontend redirige al comprador a ese `init_point` (checkout de MP).
+3. Tras pagar, MP redirige a las `back_urls` del frontend
+   (`/pago/exito`, `/pago/error`, `/pago/pendiente`) con `external_reference`
+   (el id de compra) y el `status` del pago.
+4. La página de resultado consulta `GET /api/compras/:id/estado`, que busca el
+   pago real en Mercado Pago y sincroniza el estado de la compra
+   (`pendiente → confirmado/cancelado`).
+
+### Configuración
+
+En `backend/.env` (ver `.env.example`):
+
+```bash
+MP_ACCESS_TOKEN=TEST-...        # Access Token de PRUEBA de tu app
+FRONTEND_URL=http://localhost:5173
+```
+
+> El Access Token de prueba se obtiene en
+> [panel de desarrolladores → tu app → Credenciales de prueba](https://www.mercadopago.com.ar/developers/panel/app).
+> Si `MP_ACCESS_TOKEN` está vacío, la app usa un cliente **FAKE** (útil para
+> tests y dev sin credenciales). Por eso la batería de tests TDD no necesita red.
+
+### Redirección automática al volver del pago (túnel)
+
+Mercado Pago **no permite redirigir (`auto_return`) a `localhost`**: exige una
+URL pública **https**. En desarrollo se resuelve con un túnel que publica el
+frontend local. El código activa `auto_return` automáticamente cuando
+`FRONTEND_URL` es https público.
+
+```bash
+# 1) Levantar un túnel al frontend (puerto 5173)
+npx cloudflared tunnel --url http://localhost:5173
+#    -> devuelve una URL tipo https://<random>.trycloudflare.com
+```
+
+```bash
+# 2) En backend/.env apuntar FRONTEND_URL a esa URL y reiniciar el backend
+FRONTEND_URL=https://<random>.trycloudflare.com
+```
+
+- El `vite.config.ts` ya permite estos hosts (`allowedHosts`).
+- **Abrí la app desde la URL del túnel** (no desde `localhost`), porque MP
+  redirige a ese dominio. El túnel solo reenvía a tu `localhost:5173`.
+
+> **Duración del túnel:** vive mientras corra el proceso `cloudflared`. Si lo
+> cerrás, reiniciás la PC o se cae, la URL deja de existir y al relevantarlo te
+> da **otra URL distinta** (hay que volver a actualizar `FRONTEND_URL`). Los
+> quick tunnels sin cuenta no tienen garantía de uptime.
+>
+> Si no querés túnel, dejá `FRONTEND_URL=http://localhost:5173`: el flujo
+> funciona igual, pero al terminar el pago se vuelve con el botón
+> **"Volver al sitio"** del checkout en vez de redirigir solo.
+
+### Probar el pago
+
+- Iniciá sesión en el checkout con un **usuario de prueba comprador** (creado
+  desde el panel de MP o vía MCP), **no** con tu cuenta real.
+- Tarjetas de prueba (Argentina): p. ej. **Mastercard 5031 7557 3453 0604**,
+  CVV `123`, vencimiento futuro. El nombre del titular define el resultado:
+  `APRO` (aprobado), `OTHE` (rechazo general), `CONT` (pendiente).
 
 ## Ciclo TDD aplicado
 

@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react(), tsconfigPaths(), tailwindcss()],
   server: {
     port: 5173,
+    // Permitir hosts de túneles (cloudflared/ngrok) para probar el retorno de Mercado Pago.
+    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.loca.lt'],
     proxy: {
       '/api': 'http://localhost:3001',
     },

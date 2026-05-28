@@ -2,6 +2,7 @@ import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import ComprarEntradas from './pages/comprar-entradas';
 import Confirmacion from './pages/confirmacion';
+import PagoResultado from './pages/pago-resultado';
 
 export default function App() {
   const { user } = useAuth();
@@ -20,6 +21,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ComprarEntradas />} />
           <Route path="/confirmacion" element={<Confirmacion />} />
+          <Route path="/pago/exito" element={<PagoResultado />} />
+          <Route path="/pago/error" element={<PagoResultado />} />
+          <Route path="/pago/pendiente" element={<PagoResultado />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -19,4 +19,5 @@ export const api = {
   tipos: () => request('/tipos-ticket'),
   horarios: () => request('/horarios'),
   comprar: (body: object) => request('/compras', { method: 'POST', body: JSON.stringify(body) }),
+  estadoCompra: (id: string | number) => request(`/compras/${id}/estado`),
 };
