@@ -33,13 +33,15 @@ function seedReferenceData(db) {
     const insertHorario = db.prepare(
       'INSERT INTO Horarios (dia_semana, hora_apertura, hora_cierre) VALUES (?, ?, ?)'
     );
+    // El parque abre de martes a domingo de 08:30 a 19:00.
+    // Los lunes permanece cerrado (no se siembra ninguna fila para 'lunes').
     [
-      ['martes', '09:00', '18:00'],
-      ['miercoles', '09:00', '18:00'],
-      ['jueves', '09:00', '18:00'],
-      ['viernes', '09:00', '18:00'],
-      ['sabado', '09:00', '20:00'],
-      ['domingo', '09:00', '20:00'],
+      ['martes', '08:30', '19:00'],
+      ['miercoles', '08:30', '19:00'],
+      ['jueves', '08:30', '19:00'],
+      ['viernes', '08:30', '19:00'],
+      ['sabado', '08:30', '19:00'],
+      ['domingo', '08:30', '19:00'],
     ].forEach((h) => insertHorario.run(...h));
   }
 
@@ -48,8 +50,8 @@ function seedReferenceData(db) {
     const insertTipo = db.prepare(
       'INSERT INTO TiposTicket (nombre, pase, precio, descripcion) VALUES (?, ?, ?, ?)'
     );
-    insertTipo.run('VIP', 'VIP', 3200, 'Acceso prioritario');
-    insertTipo.run('Regular', 'regular', 1800, 'Entrada estándar');
+    insertTipo.run('VIP', 'VIP', 20000, 'Acceso prioritario');
+    insertTipo.run('Regular', 'regular', 10000, 'Entrada estándar');
   }
 
   seedHardcodedUser(db);

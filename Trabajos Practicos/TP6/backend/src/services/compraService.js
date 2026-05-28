@@ -3,6 +3,9 @@ const crypto = require('crypto');
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const METODOS_PAGO = ['efectivo', 'tarjeta'];
 const MAX_ENTRADAS = 10;
+// Feriados en los que el parque cierra, sin importar el día de la semana.
+// Formato 'MM-DD': 25 de diciembre (Navidad) y 1 de enero (Año Nuevo).
+const FERIADOS = ['12-25', '01-01'];
 
 class CompraError extends Error {
   constructor(message, status = 400) {
@@ -162,12 +165,21 @@ class CompraService {
     if (visita < hoy) {
       throw new CompraError('La fecha de visita debe ser hoy o futura');
     }
+    // Feriados: el parque cierra el 25 de diciembre y el 1 de enero.
+    const mmdd = `${String(visita.getMonth() + 1).padStart(2, '0')}-${String(visita.getDate()).padStart(2, '0')}`;
+    if (FERIADOS.includes(mmdd)) {
+      throw new CompraError('El parque permanece cerrado en esa fecha por ser feriado (25 de diciembre y 1 de enero)');
+    }
+    // Lunes: el parque permanece cerrado (no hay fila en Horarios para 'lunes').
     const dia = DIAS_SEMANA[visita.getDay()];
     const horario = this.db
       .prepare('SELECT * FROM Horarios WHERE dia_semana = ? AND activo = 1')
       .get(dia);
     if (!horario) {
-      throw new CompraError('El parque se encuentra cerrado en la fecha seleccionada');
+      const motivo = dia === 'lunes'
+        ? 'El parque permanece cerrado los lunes'
+        : 'El parque se encuentra cerrado en la fecha seleccionada';
+      throw new CompraError(motivo);
     }
   }
 
@@ -187,4 +199,4 @@ class CompraService {
   }
 }
 
-module.exports = { CompraService, CompraError };
+module.exports = { CompraService, CompraError, FERIADOS };
