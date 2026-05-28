@@ -1,122 +1,93 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Card, CardHeader, CardContent,
-  TextField, Label, Input, FieldError,
-  Select, ListBox, ListBoxItem,
-  RadioGroup, Radio,
-  Button, Spinner, Separator, Modal,
-  DatePicker, DateField, Calendar,
-  toast,
-} from '@heroui/react';
-import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@heroui/react';
 import {
-  CalendarDays, Users, Ticket, Banknote,
-  ShieldCheck, AlertTriangle,
+  CalendarDays, Ticket, Users, Lock, Crown, Banknote,
+  ShieldCheck, Check, X, Info,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { ARS, fmtISOLong, toISO, PERKS } from '../lib/format';
+import { Glass, SectionLabel, PrimaryBtn, FieldError, Stepper, Calendar } from '../components/ui';
 import mpLogo from '../assets/MercadoPago.png';
 
-interface TipoTicket {
-  id: number;
-  nombre: string;
-  precio: number;
-}
-
-interface Horario {
-  dia_semana: string;
-}
-
-interface TicketForm {
-  tipoTicketId: string;
-  edad: string;
-}
-
-const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-
-function diaSemana(fechaISO: string): string | null {
-  if (!fechaISO) return null;
-  const [y, m, d] = fechaISO.split('-').map(Number);
-  return DIAS[new Date(y, m - 1, d).getDay()];
-}
-
-function formatearFecha(fechaISO: string): string {
-  if (!fechaISO) return '';
-  const [y, m, d] = fechaISO.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
-}
+interface TipoTicket { id: number; nombre: string; precio: number; }
+interface Horario { dia_semana: string; }
+interface TicketForm { tipoTicketId: string; edad: string; }
+type Errores = { fecha?: string; pago?: string; visitantes?: string };
 
 export default function ComprarEntradas() {
   const [tipos, setTipos] = useState<TipoTicket[]>([]);
   const [horarios, setHorarios] = useState<Horario[]>([]);
-  const [fechaValue, setFechaValue] = useState<DateValue | null>(null);
+  const [fecha, setFecha] = useState<Date | null>(null);
   const [cantidad, setCantidad] = useState(1);
   const [tickets, setTickets] = useState<TicketForm[]>([{ tipoTicketId: '', edad: '' }]);
   const [metodoPago, setMetodoPago] = useState('');
-  const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [errores, setErrores] = useState<Errores>({});
+  const [loadError, setLoadError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
-
-  const hoy = today(getLocalTimeZone());
-  const fecha = fechaValue ? fechaValue.toString() : ''; // 'YYYY-MM-DD'
 
   useEffect(() => {
     Promise.all([api.tipos(), api.horarios()])
       .then(([t, h]) => {
-        setTipos(t as TipoTicket[]);
+        const tt = t as TipoTicket[];
+        setTipos(tt);
         setHorarios(h as Horario[]);
+        // Por defecto, el tipo más económico (Regular) para el primer visitante.
+        const barato = [...tt].sort((a, b) => a.precio - b.precio)[0];
+        if (barato) setTickets([{ tipoTicketId: String(barato.id), edad: '' }]);
       })
-      .catch((e: Error) => setErr(e.message));
+      .catch((e: Error) => setLoadError(e.message));
   }, []);
 
-  function ajustarCantidad(n: string) {
-    const v = Math.max(1, Math.min(10, Number(n) || 1));
+  const diasAbiertos = useMemo(() => new Set(horarios.map((h) => h.dia_semana)), [horarios]);
+  const tipoById = useMemo(() => Object.fromEntries(tipos.map((t) => [String(t.id), t])), [tipos]);
+  const tipoBarato = useMemo(() => [...tipos].sort((a, b) => a.precio - b.precio)[0], [tipos]);
+  const total = tickets.reduce((acc, t) => acc + (tipoById[t.tipoTicketId]?.precio ?? 0), 0);
+  const esTarjeta = metodoPago === 'tarjeta';
+  const fechaISO = fecha ? toISO(fecha) : '';
+
+  function setCantidadYTickets(v: number) {
     setCantidad(v);
     setTickets((prev) => {
       const next = [...prev];
-      while (next.length < v) next.push({ tipoTicketId: '', edad: '' });
+      while (next.length < v) next.push({ tipoTicketId: tipoBarato ? String(tipoBarato.id) : '', edad: '' });
       next.length = v;
       return next;
     });
+    setErrores((e) => ({ ...e, visitantes: undefined }));
   }
 
   function setTicket(i: number, patch: Partial<TicketForm>) {
     setTickets((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+    setErrores((e) => ({ ...e, visitantes: undefined }));
   }
 
-  const tipoById = useMemo(
-    () => Object.fromEntries(tipos.map((t) => [t.id, t])),
-    [tipos],
-  );
-  const total = tickets.reduce((acc, t) => acc + (tipoById[t.tipoTicketId]?.precio ?? 0), 0);
-  const diasAbiertos = useMemo(() => new Set(horarios.map((h) => h.dia_semana)), [horarios]);
-  const diaInvalido = fecha && !diasAbiertos.has(diaSemana(fecha) ?? '');
-  const esTarjeta = metodoPago === 'tarjeta';
-
-  // Valida el formulario y, si está OK, abre el modal de confirmación.
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr('');
-    if (!fecha) return setErr('Indicá la fecha de visita');
-    if (diaInvalido) return setErr('El parque está cerrado ese día');
-    if (!metodoPago) return setErr('Seleccioná una forma de pago');
-    if (cantidad > 10) return setErr('La cantidad máxima es 10 entradas');
+  function validar(): boolean {
+    const e: Errores = {};
+    if (!fechaISO) e.fecha = 'Elegí una fecha de visita.';
+    if (cantidad < 1 || cantidad > 10) e.visitantes = 'La cantidad debe estar entre 1 y 10 entradas.';
     for (const [i, t] of tickets.entries()) {
-      if (!t.tipoTicketId) return setErr(`Seleccioná el tipo de pase del visitante #${i + 1}`);
-      if (t.edad === '' || Number.isNaN(Number(t.edad))) return setErr(`Indicá la edad del visitante #${i + 1}`);
+      if (!t.tipoTicketId) { e.visitantes = `Elegí el tipo de pase del visitante #${i + 1}.`; break; }
+      if (t.edad === '' || Number.isNaN(Number(t.edad)) || Number(t.edad) < 0 || Number(t.edad) > 120) {
+        e.visitantes = `Completá una edad válida (0–120) para el visitante #${i + 1}.`; break;
+      }
     }
-    setConfirmOpen(true);
+    if (!metodoPago) e.pago = 'Seleccioná una forma de pago.';
+    setErrores(e);
+    return Object.keys(e).length === 0;
   }
 
-  // Confirma la compra desde el modal (ya validada).
+  function abrirConfirmacion() {
+    if (validar()) setConfirmOpen(true);
+  }
+
   async function confirmarCompra() {
     setLoading(true);
     try {
       const res = await api.comprar({
-        fechaVisita: fecha,
+        fechaVisita: fechaISO,
         metodoPago,
         tickets: tickets.map((t) => ({ tipoTicketId: Number(t.tipoTicketId), edad: Number(t.edad) })),
       }) as { redirectUrl?: string };
@@ -130,232 +101,280 @@ export default function ComprarEntradas() {
       nav('/confirmacion', { state: res });
     } catch (error) {
       setConfirmOpen(false);
-      const msg = (error as Error).message;
-      setErr(msg);
-      toast.danger('No pudimos registrar la compra', { description: msg });
+      toast.danger('No pudimos registrar la compra', { description: (error as Error).message });
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="animate-fade-in-up shadow-md">
-      <CardHeader>
-        <div>
-          <h1 className="text-2xl font-bold">Comprar entradas</h1>
-          <p className="text-sm text-muted">Asegurá tu visita al parque</p>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
+        {/* Hero */}
+        <div
+          className="relative mb-4 animate-fade-in-up overflow-hidden rounded-[1.6rem] p-5 text-white"
+          style={{ background: 'linear-gradient(130deg,var(--p6),var(--a6))' }}
+        >
+          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 85% 15%,#fff 0,transparent 40%),radial-gradient(circle at 10% 90%,#fff 0,transparent 35%)' }} />
+          <div className="relative">
+            <h2 className="font-poppins text-2xl font-bold leading-tight">Reservá tu visita</h2>
+            <p className="mt-1 text-[13px] text-white/85">Asegurá tu lugar en EcoHarmony Park en pocos pasos.</p>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <form className="flex flex-col gap-5" onSubmit={onSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <DatePicker
-              value={fechaValue}
-              onChange={setFechaValue}
-              minValue={hoy}
-              isRequired
-              isInvalid={!!diaInvalido}
-            >
-              <Label className="flex items-center gap-1.5">
-                <CalendarDays className="size-4 text-muted" /> Fecha de visita
-              </Label>
-              <DateField.Group fullWidth>
-                <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
-                <DateField.Suffix>
-                  <DatePicker.Trigger>
-                    <DatePicker.TriggerIndicator />
-                  </DatePicker.Trigger>
-                </DateField.Suffix>
-              </DateField.Group>
-              {diaInvalido && <FieldError>El parque está cerrado ese día</FieldError>}
-              <DatePicker.Popover>
-                <Calendar aria-label="Fecha de visita">
-                  <Calendar.Header>
-                    <Calendar.YearPickerTrigger>
-                      <Calendar.YearPickerTriggerHeading />
-                      <Calendar.YearPickerTriggerIndicator />
-                    </Calendar.YearPickerTrigger>
-                    <Calendar.NavButton slot="previous" />
-                    <Calendar.NavButton slot="next" />
-                  </Calendar.Header>
-                  <Calendar.Grid>
-                    <Calendar.GridHeader>
-                      {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                    </Calendar.GridHeader>
-                    <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                  </Calendar.Grid>
-                  <Calendar.YearPickerGrid>
-                    <Calendar.YearPickerGridBody>
-                      {({ year }) => <Calendar.YearPickerCell year={year} />}
-                    </Calendar.YearPickerGridBody>
-                  </Calendar.YearPickerGrid>
-                </Calendar>
-              </DatePicker.Popover>
-            </DatePicker>
 
-            <TextField
-              value={String(cantidad)}
-              onChange={ajustarCantidad}
-              isRequired
-            >
-              <Label className="flex items-center gap-1.5">
-                <Users className="size-4 text-muted" /> Cantidad de entradas (máx 10)
-              </Label>
-              <Input type="number" min={1} max={10} />
-              <FieldError />
-            </TextField>
-          </div>
+        {loadError && (
+          <Glass className="mb-3 p-4">
+            <FieldError>{loadError}</FieldError>
+          </Glass>
+        )}
 
-          <Separator />
-
-          <div className="flex flex-col gap-3">
-            <h2 className="flex items-center gap-1.5 font-semibold">
-              <Ticket className="size-4 text-muted" /> Visitantes
-            </h2>
-            {tickets.map((t, i) => (
-              <div
-                key={i}
-                className="grid animate-fade-in-up grid-cols-1 gap-3 rounded-lg bg-default-50 p-3 sm:grid-cols-[1fr_8rem]"
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <Select
-                  selectedKey={t.tipoTicketId || null}
-                  onSelectionChange={(key) => setTicket(i, { tipoTicketId: key != null ? String(key) : '' })}
-                  isRequired
-                >
-                  <Label>Tipo de pase #{i + 1}</Label>
-                  <Select.Trigger>
-                    <Select.Value />
-                    <Select.Indicator />
-                  </Select.Trigger>
-                  <Select.Popover>
-                    <ListBox>
-                      {tipos.map((tipo) => (
-                        <ListBoxItem key={String(tipo.id)} id={String(tipo.id)} textValue={`${tipo.nombre} - $${tipo.precio}`}>
-                          {tipo.nombre} - ${tipo.precio}
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
-                <TextField
-                  value={t.edad}
-                  onChange={(v) => setTicket(i, { edad: v })}
-                  isRequired
-                >
-                  <Label>Edad</Label>
-                  <Input type="number" min={0} max={120} />
-                  <FieldError />
-                </TextField>
+        <div className="space-y-3.5">
+          {/* 1 · Fecha */}
+          <Glass className="animate-fade-in-up p-4">
+            <SectionLabel n={1} icon={CalendarDays} hint={fechaISO ? '✓' : 'requerido'}>Fecha de visita</SectionLabel>
+            {fechaISO && (
+              <div className="mb-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-[13px] font-medium text-emerald-800">
+                <Check className="size-4" /><span className="capitalize">{fmtISOLong(fechaISO)}</span>
               </div>
-            ))}
-          </div>
+            )}
+            <Calendar selected={fecha} onSelect={(d) => { setFecha(d); setErrores((e) => ({ ...e, fecha: undefined })); }} diasAbiertos={diasAbiertos} />
+            <FieldError>{errores.fecha}</FieldError>
+          </Glass>
 
-          <Separator />
-
-          <RadioGroup value={metodoPago} onChange={setMetodoPago} isRequired>
-            <Label>Forma de pago</Label>
-            <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:gap-4">
-              <Radio value="efectivo">
-                <Radio.Control><Radio.Indicator /></Radio.Control>
-                <Radio.Content className="flex items-center gap-2">
-                  <Banknote className="size-5 text-success" /> Efectivo (en boletería)
-                </Radio.Content>
-              </Radio>
-              <Radio value="tarjeta">
-                <Radio.Control><Radio.Indicator /></Radio.Control>
-                <Radio.Content className="flex items-center gap-2">
-                  <img src={mpLogo} alt="Mercado Pago" className="h-5 w-auto" /> Tarjeta (Mercado Pago)
-                </Radio.Content>
-              </Radio>
+          {/* 2 · Pases (informativo) */}
+          <Glass className="animate-fade-in-up p-4">
+            <SectionLabel n={2} icon={Ticket} hint="qué incluye">Tipos de pase</SectionLabel>
+            <div className="space-y-2.5">
+              {tipos.map((tipo) => {
+                const vip = tipo.nombre.toLowerCase().includes('vip');
+                const I = vip ? Crown : Ticket;
+                return (
+                  <div key={tipo.id} className="rounded-2xl border border-emerald-900/10 bg-white/60 p-3">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="grid size-10 shrink-0 place-items-center rounded-xl text-white"
+                        style={{ background: vip ? 'linear-gradient(135deg,var(--a6),var(--p6))' : 'linear-gradient(135deg,var(--p4),var(--a5))' }}
+                      >
+                        <I className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-poppins text-[15px] font-semibold text-slate-800">Pase {tipo.nombre}</h4>
+                          <div className="text-right">
+                            <span className="font-poppins text-lg font-bold text-slate-900">{ARS(tipo.precio)}</span>
+                            <span className="text-[11px] text-slate-400"> /pers.</span>
+                          </div>
+                        </div>
+                        <ul className="mt-2 space-y-1">
+                          {(PERKS[tipo.nombre] ?? []).map((p, i) => (
+                            <li key={i} className="flex items-start gap-2 text-[12px] text-slate-600">
+                              <Check className="mt-px size-[14px] shrink-0" style={{ color: 'var(--p5)' }} strokeWidth={2.5} />
+                              <span>{p}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </RadioGroup>
+          </Glass>
 
-          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-lg">
-              Total: <strong>${total.toLocaleString('es-AR')}</strong>
-            </span>
-            <Button type="submit" className="w-full sm:w-auto">
-              {esTarjeta ? 'Pagar con Mercado Pago' : 'Confirmar compra'}
-            </Button>
-          </div>
+          {/* 3 · Cantidad y visitantes */}
+          <Glass className="animate-fade-in-up p-4">
+            <SectionLabel n={3} icon={Users} hint="máx. 10">Cantidad y visitantes</SectionLabel>
+            <Stepper value={cantidad} min={1} max={10} onChange={setCantidadYTickets} />
+            <p className="mb-2 mt-4 text-[12.5px] text-slate-500">Elegí el tipo de pase y la edad de cada visitante</p>
+            <div className="space-y-2.5">
+              {tickets.map((t, i) => (
+                <div key={i} className="animate-fade-in-up rounded-xl border border-emerald-900/10 bg-white/60 p-3" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-emerald-500/12 text-[11px] font-bold text-emerald-700">{i + 1}</span>
+                    <span className="text-[12.5px] font-medium text-slate-600">Visitante {i + 1}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={120}
+                      placeholder="Edad"
+                      value={t.edad}
+                      onChange={(e) => setTicket(i, { edad: e.target.value })}
+                      className="ml-auto w-24 rounded-lg border border-emerald-900/10 bg-white px-3 py-1.5 text-right text-[14px] font-medium text-slate-800 outline-none transition focus:border-emerald-500/60 placeholder:font-normal placeholder:text-slate-400"
+                    />
+                    <span className="text-[11px] text-slate-400">años</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {tipos.map((tipo) => {
+                      const sel = t.tipoTicketId === String(tipo.id);
+                      return (
+                        <button
+                          key={tipo.id}
+                          type="button"
+                          onClick={() => setTicket(i, { tipoTicketId: String(tipo.id) })}
+                          className={`flex items-center justify-between gap-1 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.98] ${
+                            sel ? 'border-transparent bg-emerald-500/[0.07]' : 'border-emerald-900/10 bg-white/70 hover:border-emerald-500/40'
+                          }`}
+                          style={sel ? { boxShadow: '0 0 0 2px var(--p5)' } : {}}
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-[13px] font-semibold text-slate-800">{tipo.nombre}</div>
+                            <div className="text-[11.5px] text-slate-500">{ARS(tipo.precio)}</div>
+                          </div>
+                          <span
+                            className={`grid size-4 shrink-0 place-items-center rounded-full border-2 ${sel ? 'border-transparent text-white' : 'border-slate-300 text-transparent'}`}
+                            style={sel ? { background: 'linear-gradient(135deg,var(--p5),var(--a6))' } : {}}
+                          >
+                            <Check className="size-2.5" strokeWidth={3} />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <FieldError>{errores.visitantes}</FieldError>
+          </Glass>
 
-          {err && (
-            <p className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground" role="alert">
-              <AlertTriangle className="size-4 shrink-0" /> {err}
-            </p>
-          )}
-        </form>
-      </CardContent>
+          {/* 4 · Forma de pago */}
+          <Glass className="animate-fade-in-up p-4">
+            <SectionLabel n={4} icon={Lock} hint={metodoPago ? '✓' : 'requerido'}>Forma de pago</SectionLabel>
+            <div className="space-y-2.5">
+              {[
+                { id: 'tarjeta', t: 'Tarjeta', s: 'Pago seguro vía Mercado Pago', badge: 'Recomendado' },
+                { id: 'efectivo', t: 'Efectivo', s: 'Abonás al ingresar, en boletería' },
+              ].map((o) => {
+                const sel = metodoPago === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => { setMetodoPago(o.id); setErrores((e) => ({ ...e, pago: undefined })); }}
+                    className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition active:scale-[0.99] ${
+                      sel ? 'border-transparent bg-emerald-500/[0.06]' : 'border-emerald-900/10 bg-white/60 hover:border-emerald-500/40'
+                    }`}
+                    style={sel ? { boxShadow: '0 0 0 2px var(--p5)' } : {}}
+                  >
+                    <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white" style={o.id === 'efectivo' ? { background: 'linear-gradient(135deg,var(--p5),var(--a6))' } : {}}>
+                      {o.id === 'tarjeta'
+                        ? <img src={mpLogo} alt="Mercado Pago" className="size-7 object-contain" />
+                        : <Banknote className="size-5 text-white" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-poppins text-[14.5px] font-semibold text-slate-800">{o.t}</span>
+                        {o.badge && <span className="rounded-full bg-emerald-500/12 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-emerald-700">{o.badge}</span>}
+                      </div>
+                      <div className="text-[12px] text-slate-500">{o.s}</div>
+                    </div>
+                    <span className={`grid size-5 shrink-0 place-items-center rounded-full border-2 ${sel ? 'border-transparent text-white' : 'border-slate-300 text-transparent'}`} style={sel ? { background: 'linear-gradient(135deg,var(--p5),var(--a6))' } : {}}>
+                      <Check className="size-3" strokeWidth={3} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <FieldError>{errores.pago}</FieldError>
+          </Glass>
 
-      {/* Modal de confirmación */}
-      <Modal.Backdrop isOpen={confirmOpen} onOpenChange={(v) => !loading && setConfirmOpen(v)}>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-[440px]">
-            {!loading && <Modal.CloseTrigger />}
-            <Modal.Header>
-              <Modal.Icon className="bg-success-soft text-success-soft-foreground">
+          {/* Resumen */}
+          <Glass className="p-4">
+            <div className="flex items-center justify-between text-[13px] text-slate-500">
+              <span>{cantidad} {cantidad === 1 ? 'entrada' : 'entradas'}</span>
+              {fechaISO && <span className="capitalize">{fmtISOLong(fechaISO)}</span>}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-emerald-900/[0.07] pt-2">
+              <span className="font-poppins font-semibold text-slate-700">Total</span>
+              <span className="bg-clip-text font-poppins text-2xl font-bold text-transparent" style={{ backgroundImage: 'linear-gradient(135deg,var(--p6),var(--a6))' }}>{ARS(total)}</span>
+            </div>
+          </Glass>
+        </div>
+      </div>
+
+      {/* CTA fija */}
+      <div className="border-t border-emerald-900/[0.06] bg-white/70 px-4 py-3 backdrop-blur-xl">
+        <PrimaryBtn onClick={abrirConfirmacion} disabled={tipos.length === 0}>
+          <Lock className="size-4" />
+          {esTarjeta ? 'Pagar con Mercado Pago' : 'Confirmar compra'} · {ARS(total)}
+        </PrimaryBtn>
+        <p className="mt-2 text-center text-[11px] text-slate-400">Compra disponible solo para usuarios registrados</p>
+      </div>
+
+      {/* Bottom-sheet de confirmación */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => !loading && setConfirmOpen(false)}
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            style={{ animation: 'fade-in-up .2s ease' }}
+          />
+          <div className="relative w-full max-w-[420px] rounded-t-[1.8rem] bg-[var(--screen-bg)] p-5 shadow-2xl sm:rounded-[1.8rem]" style={{ animation: 'fade-in-up .3s cubic-bezier(0.22,1,0.36,1) both' }}>
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300 sm:hidden" />
+            {!loading && (
+              <button type="button" onClick={() => setConfirmOpen(false)} className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-slate-400 transition hover:bg-slate-500/10" aria-label="Cerrar">
+                <X className="size-5" />
+              </button>
+            )}
+            <div className="mb-4 flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-2xl text-white" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a6))' }}>
                 {esTarjeta ? <ShieldCheck className="size-5" /> : <Ticket className="size-5" />}
-              </Modal.Icon>
-              <Modal.Heading>Confirmá tu compra</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              <dl className="flex flex-col gap-2 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Fecha de visita</dt>
-                  <dd className="text-right font-medium capitalize">{formatearFecha(fecha)}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Entradas</dt>
-                  <dd className="font-medium">{cantidad}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Forma de pago</dt>
-                  <dd className="font-medium capitalize">{metodoPago}</dd>
-                </div>
-              </dl>
+              </span>
+              <div>
+                <h3 className="font-poppins text-lg font-bold text-slate-900">Confirmá tu compra</h3>
+                <p className="text-[12.5px] text-slate-500 capitalize">{fmtISOLong(fechaISO)}</p>
+              </div>
+            </div>
 
-              <Separator className="my-3" />
-
-              <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto text-sm">
+            <div className="rounded-2xl bg-white/70 p-3">
+              <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto text-[13px]">
                 {tickets.map((t, i) => {
                   const tipo = tipoById[t.tipoTicketId];
                   return (
-                    <li key={i} className="flex justify-between gap-4">
-                      <span className="text-muted">
-                        {tipo?.nombre ?? 'Pase'} · {t.edad} años
-                      </span>
-                      <span className="font-medium">${(tipo?.precio ?? 0).toLocaleString('es-AR')}</span>
+                    <li key={i} className="flex items-center justify-between gap-3">
+                      <span className="text-slate-600">Visitante {i + 1} · {tipo?.nombre} · {t.edad} años</span>
+                      <span className="font-medium text-slate-800">{ARS(tipo?.precio ?? 0)}</span>
                     </li>
                   );
                 })}
               </ul>
-
-              <Separator className="my-3" />
-
-              <div className="flex items-center justify-between text-base">
-                <span className="font-semibold">Total</span>
-                <span className="text-lg font-bold">${total.toLocaleString('es-AR')}</span>
+              <div className="mt-2 flex items-center justify-between border-t border-emerald-900/[0.07] pt-2">
+                <span className="text-[13px] text-slate-500">Forma de pago: <span className="font-medium capitalize text-slate-700">{metodoPago}</span></span>
+                <span className="font-poppins text-lg font-bold text-slate-900">{ARS(total)}</span>
               </div>
+            </div>
 
-              {esTarjeta && (
-                <p className="mt-3 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent-soft-foreground">
-                  <img src={mpLogo} alt="Mercado Pago" className="h-4 w-auto" />
-                  Te redirigimos a Mercado Pago para completar el pago de forma segura.
-                </p>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button slot="close" variant="secondary" isDisabled={loading}>
+            {esTarjeta && (
+              <p className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-800">
+                <Info className="size-4 shrink-0" />
+                Te redirigimos a Mercado Pago para completar el pago de forma segura.
+              </p>
+            )}
+
+            <div className="mt-4 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                disabled={loading}
+                className="flex-1 rounded-2xl border border-emerald-900/10 bg-white/70 px-5 py-3.5 font-poppins text-[15px] font-semibold text-slate-600 transition active:scale-[0.985] disabled:opacity-40"
+              >
                 Cancelar
-              </Button>
-              <Button onPress={confirmarCompra} isDisabled={loading}>
-                {loading ? <Spinner /> : esTarjeta ? 'Ir a pagar' : 'Confirmar'}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Card>
+              </button>
+              <div className="flex-1">
+                <PrimaryBtn onClick={confirmarCompra} disabled={loading}>
+                  {loading ? (
+                    <span className="size-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : (
+                    <>{esTarjeta ? 'Ir a pagar' : 'Confirmar'}</>
+                  )}
+                </PrimaryBtn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

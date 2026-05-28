@@ -38,7 +38,7 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     expect(result.estado).toBe('pendiente');
     expect(result.cantidad).toBe(2);
     expect(result.fechaVisita).toBe('2026-06-02');
-    expect(result.montoTotal).toBe(3200 + 1800);
+    expect(result.montoTotal).toBe(20000 + 10000);
     expect(result.redirectUrl).toMatch(/^https:\/\/mp\.test\/checkout\//);
     expect(mailer.sent).toHaveLength(1);
     expect(mailer.sent[0].to).toBe('visitante@ecoharmony.com');
@@ -56,7 +56,7 @@ describe('CompraService - Comprar entradas (TDD)', () => {
 
     expect(result.redirectUrl).toBeNull();
     expect(result.cantidad).toBe(1);
-    expect(result.montoTotal).toBe(1800);
+    expect(result.montoTotal).toBe(10000);
     expect(result.fechaVisita).toBe('2026-06-02');
     expect(mp.created).toHaveLength(0);
     expect(mailer.sent).toHaveLength(1);
@@ -92,6 +92,30 @@ describe('CompraService - Comprar entradas (TDD)', () => {
       service.comprar({
         usuarioId: 1,
         fechaVisita: '2026-06-08', // lunes
+        metodoPago: 'efectivo',
+        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
+      })
+    ).rejects.toThrow(/cerrado/i);
+  });
+
+  test('falla si la fecha de visita es un feriado (25 de diciembre)', async () => {
+    const { service } = buildContext({ today: '2026-12-01' });
+    await expect(
+      service.comprar({
+        usuarioId: 1,
+        fechaVisita: '2026-12-25', // viernes pero feriado
+        metodoPago: 'efectivo',
+        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
+      })
+    ).rejects.toThrow(/cerrado/i);
+  });
+
+  test('falla si la fecha de visita es un feriado (1 de enero)', async () => {
+    const { service } = buildContext({ today: '2026-12-15' });
+    await expect(
+      service.comprar({
+        usuarioId: 1,
+        fechaVisita: '2027-01-01', // viernes pero feriado
         metodoPago: 'efectivo',
         tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
       })
@@ -173,7 +197,7 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     });
     const compra = db.prepare('SELECT * FROM Compras WHERE id = ?').get(result.compraId);
     const tickets = db.prepare('SELECT * FROM Tickets WHERE compra_id = ?').all(result.compraId);
-    expect(compra.monto_total).toBe(5000);
+    expect(compra.monto_total).toBe(30000);
     expect(tickets).toHaveLength(2);
     expect(tickets.every((t) => t.codigo_qr)).toBe(true);
   });

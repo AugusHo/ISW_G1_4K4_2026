@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Card, CardContent, Button, Spinner, Separator } from '@heroui/react';
-import { Clock3, X, Leaf } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Leaf, Mail, Clock3, X, Info, Ticket } from 'lucide-react';
+import { Glass, PrimaryBtn } from '../components/ui';
+import { ARS, fmtISOLong } from '../lib/format';
 import { api } from '../lib/api';
 
 interface EstadoCompra {
@@ -14,13 +15,7 @@ interface EstadoCompra {
   metodoPago: string;
 }
 
-// Mercado Pago redirige a las back_urls con query params:
-// ?status=approved&payment_id=...&external_reference=<compraId>&merchant_order_id=...
-const TEXTO: Record<string, {
-  titulo: string;
-  detalle: string;
-  tono: 'success' | 'warning' | 'danger';
-}> = {
+const TEXTO: Record<string, { titulo: string; detalle: string; tono: 'success' | 'warning' | 'danger' }> = {
   approved: { titulo: '¡Pago aprobado!', detalle: 'Tu compra quedó confirmada.', tono: 'success' },
   pending: { titulo: 'Pago pendiente', detalle: 'Estamos esperando la acreditación del pago.', tono: 'warning' },
   in_process: { titulo: 'Pago en proceso', detalle: 'Estamos procesando tu pago.', tono: 'warning' },
@@ -28,26 +23,26 @@ const TEXTO: Record<string, {
   cancelled: { titulo: 'Pago cancelado', detalle: 'Cancelaste el pago antes de finalizar.', tono: 'danger' },
 };
 
-const TONO_CLASES: Record<'success' | 'warning' | 'danger', { bg: string; text: string; ring: string }> = {
-  success: { bg: 'bg-success-soft', text: 'text-success-soft-foreground', ring: 'ring-success/30' },
-  warning: { bg: 'bg-warning-soft', text: 'text-warning-soft-foreground', ring: 'ring-warning/30' },
-  danger: { bg: 'bg-danger-soft', text: 'text-danger-soft-foreground', ring: 'ring-danger/30' },
+const GRAD: Record<'success' | 'warning' | 'danger', string> = {
+  success: 'linear-gradient(135deg,var(--p5),var(--a5))',
+  warning: 'linear-gradient(135deg,#f59e0b,#d97706)',
+  danger: 'linear-gradient(135deg,#f43f5e,#e11d48)',
 };
 
 const MAX_REINTENTOS = 4;
 
 function IconoResultado({ tono }: { tono: 'success' | 'warning' | 'danger' }) {
-  const c = TONO_CLASES[tono];
   return (
-    <div className={`grid size-20 place-items-center rounded-full ${c.bg} ${c.text} ring-8 ${c.ring} animate-pop-in`}>
+    <div className="relative grid size-20 place-items-center rounded-full animate-pop-in" style={{ background: GRAD[tono], boxShadow: '0 16px 36px -12px rgba(6,78,59,0.45)' }}>
+      {tono === 'success' && <span className="absolute inset-0 animate-ping rounded-full opacity-30" style={{ background: 'var(--p5)' }} />}
       {tono === 'success' ? (
-        <svg viewBox="0 0 24 24" fill="none" className="size-10" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" className="relative size-10 text-white" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <path className="check-path" d="M20 6 9 17l-5-5" />
         </svg>
       ) : tono === 'warning' ? (
-        <Clock3 className="size-10" />
+        <Clock3 className="size-10 text-white" />
       ) : (
-        <X className="size-10" strokeWidth={2.5} />
+        <X className="size-10 text-white" strokeWidth={2.5} />
       )}
     </div>
   );
@@ -55,12 +50,12 @@ function IconoResultado({ tono }: { tono: 'success' | 'warning' | 'danger' }) {
 
 export default function PagoResultado() {
   const [params] = useSearchParams();
+  const nav = useNavigate();
   const [compra, setCompra] = useState<EstadoCompra | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const intentos = useRef(0);
 
-  // status del query, o fallback al collection_status (formato legacy de MP)
   const status = params.get('status') ?? params.get('collection_status') ?? 'pending';
   const externalRef = params.get('external_reference');
 
@@ -70,29 +65,21 @@ export default function PagoResultado() {
       setLoading(false);
       return;
     }
-
     let cancelado = false;
     let timer: ReturnType<typeof setTimeout>;
 
-    // MP puede tardar unos instantes en acreditar el pago. Si volvimos con
-    // status "approved" pero el backend todavía ve la compra "pendiente",
-    // reintentamos un par de veces antes de mostrar el resultado.
+    // MP puede tardar en acreditar. Si volvimos con "approved" pero el backend
+    // aún ve la compra "pendiente", reintentamos antes de mostrar el resultado.
     async function sincronizar() {
       try {
         const c = await api.estadoCompra(externalRef as string) as EstadoCompra;
         if (cancelado) return;
-
-        const esperandoAcreditacion =
-          status === 'approved' &&
-          c.estado === 'pendiente' &&
-          intentos.current < MAX_REINTENTOS;
-
-        if (esperandoAcreditacion) {
+        const esperando = status === 'approved' && c.estado === 'pendiente' && intentos.current < MAX_REINTENTOS;
+        if (esperando) {
           intentos.current += 1;
           timer = setTimeout(sincronizar, 1500);
           return;
         }
-
         setCompra(c);
         setLoading(false);
       } catch (e) {
@@ -103,14 +90,9 @@ export default function PagoResultado() {
     }
 
     sincronizar();
-    return () => {
-      cancelado = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelado = true; clearTimeout(timer); };
   }, [externalRef, status]);
 
-  // El estado real lo manda el backend (sincronizado con MP); si aún no llegó,
-  // usamos el status del query como referencia visual.
   const estadoEfectivo = compra
     ? (compra.estado === 'confirmado' ? 'approved'
       : compra.estado === 'cancelado' ? (compra.estadoPago ?? 'rejected')
@@ -120,85 +102,79 @@ export default function PagoResultado() {
 
   if (loading) {
     return (
-      <Card className="animate-fade-in-up shadow-md">
-        <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-          <Spinner size="lg" />
-          <div>
-            <p className="text-lg font-semibold">Confirmando tu pago…</p>
-            <p className="text-sm text-muted">Estamos verificando el estado con Mercado Pago.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-4 px-4 py-16 text-center">
+        <span className="size-12 animate-spin rounded-full border-[3px] border-emerald-500/25 border-t-emerald-500" />
+        <div>
+          <p className="font-poppins text-lg font-semibold text-slate-700">Confirmando tu pago…</p>
+          <p className="mt-1 text-[13px] text-slate-400">Verificando el estado con Mercado Pago.</p>
+        </div>
+      </div>
     );
   }
 
   if (err) {
     return (
-      <Card className="animate-fade-in-up shadow-md">
-        <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-          <IconoResultado tono="danger" />
-          <div>
-            <h1 className="text-xl font-bold">Algo salió mal</h1>
-            <p className="mt-1 text-sm text-muted">{err}</p>
-          </div>
-          <Link to="/" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto">Volver al inicio</Button>
-          </Link>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-4 px-4 py-12 text-center">
+        <IconoResultado tono="danger" />
+        <div>
+          <h2 className="font-poppins text-xl font-bold text-slate-900">Algo salió mal</h2>
+          <p className="mt-1 text-[13.5px] text-slate-500">{err}</p>
+        </div>
+        <div className="w-full max-w-xs"><PrimaryBtn onClick={() => nav('/')}><Leaf className="size-4" />Volver al inicio</PrimaryBtn></div>
+      </div>
     );
   }
 
-  return (
-    <Card className="animate-fade-in-up shadow-md">
-      <CardContent className="flex flex-col items-center gap-5 py-8 text-center">
-        <IconoResultado tono={info.tono} />
-        <div>
-          <h1 className="text-2xl font-bold">{info.titulo}</h1>
-          <p className="mt-1 text-sm text-muted">{info.detalle}</p>
-        </div>
+  const confirmado = compra?.estado === 'confirmado';
 
-        {compra && (
-          <div className="w-full rounded-xl bg-default-50 p-4 text-left text-sm">
-            <dl className="flex flex-col gap-2">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Compra</dt>
-                <dd className="font-medium">#{compra.compraId}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Estado</dt>
-                <dd className="font-medium capitalize">{compra.estado}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Entradas</dt>
-                <dd className="font-medium">{compra.cantidad}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Fecha de visita</dt>
-                <dd className="font-medium">{compra.fechaVisita}</dd>
-              </div>
-              <Separator className="my-1" />
-              <div className="flex justify-between gap-4 text-base">
-                <dt className="font-semibold">Total</dt>
-                <dd className="font-bold">${compra.montoTotal.toLocaleString('es-AR')}</dd>
-              </div>
-            </dl>
+  return (
+    <div className="px-4 pb-12 pt-6">
+      <div className="mb-5 flex flex-col items-center text-center">
+        <IconoResultado tono={info.tono} />
+        <h2 className="mt-4 font-poppins text-2xl font-bold text-slate-900">{info.titulo}</h2>
+        <p className="mt-1 px-2 text-[14px] text-slate-600">{info.detalle}</p>
+        {confirmado && (
+          <div className="mt-3 flex items-center gap-2 rounded-full bg-emerald-500/10 px-3.5 py-2 text-[13px] font-medium text-emerald-800">
+            <Mail className="size-4" />Enviamos la confirmación a tu correo
           </div>
         )}
+      </div>
 
-        {compra?.estado === 'confirmado' && (
-          <p className="flex items-center justify-center gap-1.5 text-sm text-muted">
-            Te enviamos un mail de confirmación. Mostralo al ingresar al parque.
-            <Leaf className="size-4 text-success" />
-          </p>
-        )}
+      {compra && (
+        <Glass className="overflow-hidden">
+          <div className="p-5 text-white" style={{ background: 'linear-gradient(120deg,var(--p6),var(--a6))' }}>
+            <div className="flex items-center gap-2">
+              <Leaf className="size-5" />
+              <span className="font-poppins font-bold tracking-tight">EcoHarmony Park</span>
+            </div>
+            <div className="mt-3 flex items-center gap-2 font-poppins text-lg font-semibold">
+              <Ticket className="size-5" />Compra #{compra.compraId}
+            </div>
+          </div>
+          <div className="relative h-0">
+            <span className="absolute -left-2.5 -top-2.5 size-5 rounded-full bg-[var(--screen-bg)]" />
+            <span className="absolute -right-2.5 -top-2.5 size-5 rounded-full bg-[var(--screen-bg)]" />
+            <div className="absolute left-3 right-3 top-0 border-t-2 border-dashed border-emerald-900/15" />
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4 p-5">
+            <div><div className="mb-0.5 text-[11px] text-slate-400">Fecha de visita</div><div className="text-[13.5px] font-medium capitalize text-slate-800">{fmtISOLong(compra.fechaVisita)}</div></div>
+            <div><div className="mb-0.5 text-[11px] text-slate-400">Entradas</div><div className="text-[13.5px] font-medium text-slate-800">{compra.cantidad} {compra.cantidad === 1 ? 'persona' : 'personas'}</div></div>
+            <div><div className="mb-0.5 text-[11px] text-slate-400">Estado</div><div className="text-[13.5px] font-medium capitalize text-slate-800">{compra.estado}</div></div>
+            <div><div className="mb-0.5 text-[11px] text-slate-400">Total</div><div className="font-poppins text-[16px] font-bold text-slate-800">{ARS(compra.montoTotal)}</div></div>
+          </div>
+        </Glass>
+      )}
 
-        <Link to="/" className="w-full sm:w-auto">
-          <Button variant={info.tono === 'success' ? 'primary' : 'secondary'} className="w-full sm:w-auto">
-            {info.tono === 'success' ? 'Comprar más entradas' : 'Volver al inicio'}
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+      <div className="mt-4 flex items-start gap-2 px-1 text-[12.5px] text-slate-500">
+        <Info className="mt-px size-4 shrink-0" style={{ color: 'var(--p5)' }} />
+        <span>
+          {confirmado
+            ? 'Mostrá la confirmación en el acceso para validar tus entradas al ingresar.'
+            : 'Si el pago quedó pendiente, podés volver a intentarlo desde el inicio.'}
+        </span>
+      </div>
+
+      <div className="mt-5"><PrimaryBtn onClick={() => nav('/')}><Leaf className="size-4" />{info.tono === 'success' ? 'Comprar más entradas' : 'Volver al inicio'}</PrimaryBtn></div>
+    </div>
   );
 }
