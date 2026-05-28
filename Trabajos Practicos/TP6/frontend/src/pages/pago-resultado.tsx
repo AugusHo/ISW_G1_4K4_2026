@@ -128,7 +128,7 @@ export default function PagoResultado() {
   const confirmado = compra?.estado === 'confirmado';
 
   return (
-    <div className="px-4 pb-12 pt-6">
+    <div className="mx-auto w-full max-w-md px-4 pb-12 pt-6">
       <div className="mb-5 flex flex-col items-center text-center">
         <IconoResultado tono={info.tono} />
         <h2 className="mt-4 font-poppins text-2xl font-bold text-slate-900">{info.titulo}</h2>

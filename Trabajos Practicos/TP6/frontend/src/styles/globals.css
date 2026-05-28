@@ -71,6 +71,9 @@ body {
   .screen { width: 100%; height: 100dvh; border-radius: 0; border: none; box-shadow: none; }
 }
 
+/* Secciones del formulario en la vista móvil: columna simple. */
+.eco-sections { display: flex; flex-direction: column; gap: 0.875rem; }
+
 /* --- Aurora background --- */
 .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .aurora .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.5; }

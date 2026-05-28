@@ -35,7 +35,7 @@ export default function Confirmacion() {
   }
 
   return (
-    <div className="px-4 pb-12 pt-6">
+    <div className="mx-auto w-full max-w-md px-4 pb-12 pt-6">
       <div className="mb-5 flex flex-col items-center text-center">
         <div className="relative mb-4 grid size-20 place-items-center rounded-full animate-pop-in" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a5))', boxShadow: '0 16px 36px -12px var(--p6)' }}>
           <span className="absolute inset-0 animate-ping rounded-full opacity-30" style={{ background: 'var(--p5)' }} />

@@ -3,17 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@heroui/react';
 import {
   CalendarDays, Ticket, Users, Lock, Crown, Banknote,
-  ShieldCheck, Check, X, Info,
+  ShieldCheck, Check, X, Info, Clock3, CalendarX,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { ARS, fmtISOLong, toISO, PERKS } from '../lib/format';
+import { ARS, fmtISOLong, toISO } from '../lib/format';
+import { useVista } from '../lib/vista';
 import { Glass, SectionLabel, PrimaryBtn, FieldError, Stepper, Calendar } from '../components/ui';
 import mpLogo from '../assets/MercadoPago.png';
 
 interface TipoTicket { id: number; nombre: string; precio: number; }
-interface Horario { dia_semana: string; }
+interface Horario { dia_semana: string; hora_apertura: string; hora_cierre: string; }
 interface TicketForm { tipoTicketId: string; edad: string; }
 type Errores = { fecha?: string; pago?: string; visitantes?: string };
+
+const ORDEN_DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const DIA_LABEL: Record<string, string> = {
+  lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves',
+  viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo',
+};
+
+// Resume los horarios de la tabla Horarios en un texto legible.
+// Ej: "Martes a Domingo" si los días abiertos son contiguos.
+function resumirDias(dias: string[]): string {
+  const ordenados = [...dias].sort((a, b) => ORDEN_DIAS.indexOf(a) - ORDEN_DIAS.indexOf(b));
+  if (ordenados.length === 0) return '';
+  const idxs = ordenados.map((d) => ORDEN_DIAS.indexOf(d));
+  const contiguos = idxs.every((v, i) => i === 0 || v === idxs[i - 1] + 1);
+  if (contiguos && ordenados.length > 1) {
+    return `${DIA_LABEL[ordenados[0]]} a ${DIA_LABEL[ordenados[ordenados.length - 1]]}`;
+  }
+  return ordenados.map((d) => DIA_LABEL[d]).join(', ');
+}
 
 export default function ComprarEntradas() {
   const [tipos, setTipos] = useState<TipoTicket[]>([]);
@@ -27,6 +47,8 @@ export default function ComprarEntradas() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
+  const vista = useVista();
+  const esDesktop = vista === 'desktop';
 
   useEffect(() => {
     Promise.all([api.tipos(), api.horarios()])
@@ -42,6 +64,14 @@ export default function ComprarEntradas() {
   }, []);
 
   const diasAbiertos = useMemo(() => new Set(horarios.map((h) => h.dia_semana)), [horarios]);
+  const horarioInfo = useMemo(() => {
+    if (horarios.length === 0) return null;
+    return {
+      dias: resumirDias(horarios.map((h) => h.dia_semana)),
+      apertura: horarios[0].hora_apertura,
+      cierre: horarios[0].hora_cierre,
+    };
+  }, [horarios]);
   const tipoById = useMemo(() => Object.fromEntries(tipos.map((t) => [String(t.id), t])), [tipos]);
   const tipoBarato = useMemo(() => [...tipos].sort((a, b) => a.precio - b.precio)[0], [tipos]);
   const total = tickets.reduce((acc, t) => acc + (tipoById[t.tipoTicketId]?.precio ?? 0), 0);
@@ -107,31 +137,63 @@ export default function ComprarEntradas() {
     }
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
-        {/* Hero */}
-        <div
-          className="relative mb-4 animate-fade-in-up overflow-hidden rounded-[1.6rem] p-5 text-white"
-          style={{ background: 'linear-gradient(130deg,var(--p6),var(--a6))' }}
-        >
-          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 85% 15%,#fff 0,transparent 40%),radial-gradient(circle at 10% 90%,#fff 0,transparent 35%)' }} />
-          <div className="relative">
-            <h2 className="font-poppins text-2xl font-bold leading-tight">Reservá tu visita</h2>
-            <p className="mt-1 text-[13px] text-white/85">Asegurá tu lugar en EcoHarmony Park en pocos pasos.</p>
-          </div>
-        </div>
+  /* ---------- Hero ---------- */
+  const hero = (
+    <div
+      className="relative animate-fade-in-up overflow-hidden rounded-[1.6rem] p-5 text-white sm:p-6"
+      style={{ background: 'linear-gradient(130deg,var(--p6),var(--a6))' }}
+    >
+      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 85% 15%,#fff 0,transparent 40%),radial-gradient(circle at 10% 90%,#fff 0,transparent 35%)' }} />
+      <div className="relative">
+        <h2 className="font-poppins text-2xl font-bold leading-tight sm:text-3xl">Reservá tu visita</h2>
+        <p className="mt-1 text-[13px] text-white/85 sm:text-sm">Asegurá tu lugar en EcoHarmony Park en pocos pasos.</p>
+      </div>
+    </div>
+  );
 
-        {loadError && (
-          <Glass className="mb-3 p-4">
-            <FieldError>{loadError}</FieldError>
-          </Glass>
-        )}
+  /* ---------- Resumen ---------- */
+  const resumen = (
+    <Glass className="p-4">
+      <div className="flex items-center justify-between text-[13px] text-slate-500">
+        <span>{cantidad} {cantidad === 1 ? 'entrada' : 'entradas'}</span>
+        {fechaISO && <span className="capitalize">{fmtISOLong(fechaISO)}</span>}
+      </div>
+      <div className="mt-2 flex items-center justify-between border-t border-emerald-900/[0.07] pt-2">
+        <span className="font-poppins font-semibold text-slate-700">Total</span>
+        <span className="bg-clip-text font-poppins text-2xl font-bold text-transparent" style={{ backgroundImage: 'linear-gradient(135deg,var(--p6),var(--a6))' }}>{ARS(total)}</span>
+      </div>
+    </Glass>
+  );
 
-        <div className="space-y-3.5">
+  /* ---------- CTA ---------- */
+  const cta = (
+    <PrimaryBtn onClick={abrirConfirmacion} disabled={tipos.length === 0}>
+      <Lock className="size-4" />
+      {esTarjeta ? 'Pagar con Mercado Pago' : 'Confirmar compra'} · {ARS(total)}
+    </PrimaryBtn>
+  );
+
+  /* ---------- Secciones del formulario ---------- */
+  const secciones = (
+    <>
           {/* 1 · Fecha */}
           <Glass className="animate-fade-in-up p-4">
             <SectionLabel n={1} icon={CalendarDays} hint={fechaISO ? '✓' : 'requerido'}>Fecha de visita</SectionLabel>
+
+            {/* Horarios del parque (tabla Horarios) + días cerrados */}
+            {horarioInfo && (
+              <div className="mb-3 rounded-xl border border-emerald-900/10 bg-white/60 p-3">
+                <div className="flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                  <Clock3 className="size-4 shrink-0 text-emerald-600" />
+                  <span>{horarioInfo.dias} · {horarioInfo.apertura} a {horarioInfo.cierre} hs</span>
+                </div>
+                <div className="mt-1.5 flex items-start gap-2 text-[12px] text-slate-500">
+                  <CalendarX className="mt-px size-4 shrink-0 text-rose-500" />
+                  <span>Cerrado los <b>lunes</b> y feriados (<b>25 dic</b> y <b>1 ene</b>). La compra para esos días es rechazada.</span>
+                </div>
+              </div>
+            )}
+
             {fechaISO && (
               <div className="mb-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-[13px] font-medium text-emerald-800">
                 <Check className="size-4" /><span className="capitalize">{fmtISOLong(fechaISO)}</span>
@@ -141,39 +203,25 @@ export default function ComprarEntradas() {
             <FieldError>{errores.fecha}</FieldError>
           </Glass>
 
-          {/* 2 · Pases (informativo) */}
+          {/* 2 · Pases (precios) */}
           <Glass className="animate-fade-in-up p-4">
-            <SectionLabel n={2} icon={Ticket} hint="qué incluye">Tipos de pase</SectionLabel>
+            <SectionLabel n={2} icon={Ticket} hint="precios">Tipos de pase</SectionLabel>
             <div className="space-y-2.5">
               {tipos.map((tipo) => {
                 const vip = tipo.nombre.toLowerCase().includes('vip');
                 const I = vip ? Crown : Ticket;
                 return (
-                  <div key={tipo.id} className="rounded-2xl border border-emerald-900/10 bg-white/60 p-3">
-                    <div className="flex items-start gap-3">
-                      <span
-                        className="grid size-10 shrink-0 place-items-center rounded-xl text-white"
-                        style={{ background: vip ? 'linear-gradient(135deg,var(--a6),var(--p6))' : 'linear-gradient(135deg,var(--p4),var(--a5))' }}
-                      >
-                        <I className="size-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-poppins text-[15px] font-semibold text-slate-800">Pase {tipo.nombre}</h4>
-                          <div className="text-right">
-                            <span className="font-poppins text-lg font-bold text-slate-900">{ARS(tipo.precio)}</span>
-                            <span className="text-[11px] text-slate-400"> /pers.</span>
-                          </div>
-                        </div>
-                        <ul className="mt-2 space-y-1">
-                          {(PERKS[tipo.nombre] ?? []).map((p, i) => (
-                            <li key={i} className="flex items-start gap-2 text-[12px] text-slate-600">
-                              <Check className="mt-px size-[14px] shrink-0" style={{ color: 'var(--p5)' }} strokeWidth={2.5} />
-                              <span>{p}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                  <div key={tipo.id} className="flex items-center gap-3 rounded-2xl border border-emerald-900/10 bg-white/60 p-3">
+                    <span
+                      className="grid size-10 shrink-0 place-items-center rounded-xl text-white"
+                      style={{ background: vip ? 'linear-gradient(135deg,var(--a6),var(--p6))' : 'linear-gradient(135deg,var(--p4),var(--a5))' }}
+                    >
+                      <I className="size-5" />
+                    </span>
+                    <h4 className="min-w-0 flex-1 font-poppins text-[15px] font-semibold text-slate-800">Pase {tipo.nombre}</h4>
+                    <div className="shrink-0 text-right">
+                      <span className="font-poppins text-lg font-bold text-slate-900">{ARS(tipo.precio)}</span>
+                      <span className="text-[11px] text-slate-400"> /pers.</span>
                     </div>
                   </div>
                 );
@@ -277,32 +325,11 @@ export default function ComprarEntradas() {
             </div>
             <FieldError>{errores.pago}</FieldError>
           </Glass>
+    </>
+  );
 
-          {/* Resumen */}
-          <Glass className="p-4">
-            <div className="flex items-center justify-between text-[13px] text-slate-500">
-              <span>{cantidad} {cantidad === 1 ? 'entrada' : 'entradas'}</span>
-              {fechaISO && <span className="capitalize">{fmtISOLong(fechaISO)}</span>}
-            </div>
-            <div className="mt-2 flex items-center justify-between border-t border-emerald-900/[0.07] pt-2">
-              <span className="font-poppins font-semibold text-slate-700">Total</span>
-              <span className="bg-clip-text font-poppins text-2xl font-bold text-transparent" style={{ backgroundImage: 'linear-gradient(135deg,var(--p6),var(--a6))' }}>{ARS(total)}</span>
-            </div>
-          </Glass>
-        </div>
-      </div>
-
-      {/* CTA fija */}
-      <div className="border-t border-emerald-900/[0.06] bg-white/70 px-4 py-3 backdrop-blur-xl">
-        <PrimaryBtn onClick={abrirConfirmacion} disabled={tipos.length === 0}>
-          <Lock className="size-4" />
-          {esTarjeta ? 'Pagar con Mercado Pago' : 'Confirmar compra'} · {ARS(total)}
-        </PrimaryBtn>
-        <p className="mt-2 text-center text-[11px] text-slate-400">Compra disponible solo para usuarios registrados</p>
-      </div>
-
-      {/* Bottom-sheet de confirmación */}
-      {confirmOpen && (
+  /* ---------- Bottom-sheet de confirmación (compartido) ---------- */
+  const confirmacionSheet = confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
           <button
             type="button"
@@ -374,7 +401,45 @@ export default function ComprarEntradas() {
             </div>
           </div>
         </div>
-      )}
+  );
+
+  /* ════════════ Layout escritorio (web normal) ════════════ */
+  if (esDesktop) {
+    return (
+      <div className="px-6 py-8">
+        <div className="mx-auto max-w-5xl">
+          {hero}
+          {loadError && <Glass className="mt-4 p-4"><FieldError>{loadError}</FieldError></Glass>}
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
+            {/* Columna formulario */}
+            <div className="flex flex-col gap-4">{secciones}</div>
+            {/* Columna resumen (sticky) */}
+            <aside className="flex flex-col gap-3 lg:sticky lg:top-6">
+              {resumen}
+              {cta}
+              <p className="text-center text-[11px] text-slate-400">Compra disponible solo para usuarios registrados</p>
+            </aside>
+          </div>
+        </div>
+        {confirmacionSheet}
+      </div>
+    );
+  }
+
+  /* ════════════ Layout móvil (app) ════════════ */
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
+        <div className="mb-4">{hero}</div>
+        {loadError && <Glass className="mb-3 p-4"><FieldError>{loadError}</FieldError></Glass>}
+        <div className="eco-sections">{secciones}</div>
+        <div className="mt-3.5">{resumen}</div>
+      </div>
+      <div className="border-t border-emerald-900/[0.06] bg-white/70 px-4 py-3 backdrop-blur-xl">
+        {cta}
+        <p className="mt-2 text-center text-[11px] text-slate-400">Compra disponible solo para usuarios registrados</p>
+      </div>
+      {confirmacionSheet}
     </div>
   );
 }

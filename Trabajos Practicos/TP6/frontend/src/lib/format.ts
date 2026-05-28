@@ -36,18 +36,3 @@ export const esFeriado = (d: Date) => {
   const mmdd = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return FERIADOS.includes(mmdd);
 };
-
-// Perks por tipo de pase para enriquecer la UI (lookup por nombre del backend).
-export const PERKS: Record<string, string[]> = {
-  Regular: [
-    'Acceso a todas las exhibiciones',
-    'Mapa interactivo del parque',
-    'Horarios de alimentación',
-  ],
-  VIP: [
-    'Todo lo del Pase Regular',
-    'Acceso prioritario sin filas',
-    'Show especial reservado',
-    'Estacionamiento incluido',
-  ],
-};
