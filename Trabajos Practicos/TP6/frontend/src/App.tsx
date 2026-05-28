@@ -74,7 +74,7 @@ export default function App() {
           />
           <main className="flex-1 overflow-y-auto overscroll-contain">{routes}</main>
         </div>
-        <Toast.Provider placement="top end" />
+        <Toast.Provider placement="top" />
       </div>
     </VistaContext.Provider>
   );

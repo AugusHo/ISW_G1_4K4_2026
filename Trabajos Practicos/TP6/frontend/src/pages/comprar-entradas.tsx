@@ -94,7 +94,7 @@ export default function ComprarEntradas() {
     setErrores((e) => ({ ...e, visitantes: undefined }));
   }
 
-  function validar(): boolean {
+  function validar(): Errores {
     const e: Errores = {};
     if (!fechaISO) e.fecha = 'Elegí una fecha de visita.';
     if (cantidad < 1 || cantidad > 10) e.visitantes = 'La cantidad debe estar entre 1 y 10 entradas.';
@@ -106,11 +106,25 @@ export default function ComprarEntradas() {
     }
     if (!metodoPago) e.pago = 'Seleccioná una forma de pago.';
     setErrores(e);
-    return Object.keys(e).length === 0;
+    return e;
   }
 
   function abrirConfirmacion() {
-    if (validar()) setConfirmOpen(true);
+    const e = validar();
+    // Orden visual de las secciones para priorizar el primer error.
+    const orden: { key: keyof Errores; id: string }[] = [
+      { key: 'fecha', id: 'sec-fecha' },
+      { key: 'visitantes', id: 'sec-visitantes' },
+      { key: 'pago', id: 'sec-pago' },
+    ];
+    const primero = orden.find((o) => e[o.key]);
+    if (primero) {
+      const msg = e[primero.key]!;
+      document.getElementById(primero.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast.warning('Faltan datos para continuar', { description: msg });
+      return;
+    }
+    setConfirmOpen(true);
   }
 
   async function confirmarCompra() {
@@ -177,7 +191,7 @@ export default function ComprarEntradas() {
   const secciones = (
     <>
           {/* 1 · Fecha */}
-          <Glass className="animate-fade-in-up p-4">
+          <Glass id="sec-fecha" className="animate-fade-in-up p-4">
             <SectionLabel n={1} icon={CalendarDays} hint={fechaISO ? '✓' : 'requerido'}>Fecha de visita</SectionLabel>
 
             {/* Horarios del parque (tabla Horarios) + días cerrados */}
@@ -230,7 +244,7 @@ export default function ComprarEntradas() {
           </Glass>
 
           {/* 3 · Cantidad y visitantes */}
-          <Glass className="animate-fade-in-up p-4">
+          <Glass id="sec-visitantes" className="animate-fade-in-up p-4">
             <SectionLabel n={3} icon={Users} hint="máx. 10">Cantidad y visitantes</SectionLabel>
             <Stepper value={cantidad} min={1} max={10} onChange={setCantidadYTickets} />
             <p className="mb-2 mt-4 text-[12.5px] text-slate-500">Elegí el tipo de pase y la edad de cada visitante</p>
@@ -286,7 +300,7 @@ export default function ComprarEntradas() {
           </Glass>
 
           {/* 4 · Forma de pago */}
-          <Glass className="animate-fade-in-up p-4">
+          <Glass id="sec-pago" className="animate-fade-in-up p-4">
             <SectionLabel n={4} icon={Lock} hint={metodoPago ? '✓' : 'requerido'}>Forma de pago</SectionLabel>
             <div className="space-y-2.5">
               {[

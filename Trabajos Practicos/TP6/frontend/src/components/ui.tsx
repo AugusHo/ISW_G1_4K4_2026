@@ -6,9 +6,10 @@ import {
 import { DIA, MES, sameDay, esFeriado } from '../lib/format';
 
 /* ---------- Glass card ---------- */
-export function Glass({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Glass({ children, className = '', id }: { children: ReactNode; className?: string; id?: string }) {
   return (
     <div
+      id={id}
       className={`relative rounded-[1.6rem] bg-white/80 backdrop-blur-xl border border-emerald-900/[0.06] shadow-[0_8px_30px_-12px_rgba(6,78,59,0.18)] ${className}`}
     >
       {children}
