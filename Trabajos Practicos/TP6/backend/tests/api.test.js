@@ -5,7 +5,12 @@ const { createApp } = require('../src/app');
 function setup() {
   const db = createDb(':memory:');
   seedReferenceData(db);
-  const mailer = { sent: [], async send(to, subject, body) { this.sent.push({ to, subject, body }); } };
+  const mailer = {
+    sent: [],
+    async send(to, subject, body, opts = {}) {
+      this.sent.push({ to, subject, body, attachments: opts.attachments || [] });
+    },
+  };
   const app = createApp({ db, mailer });
   return { db, app, mailer };
 }
@@ -40,7 +45,8 @@ describe('API EcoHarmony', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.redirectUrl).toMatch(/mercadopago/);
-    expect(mailer.sent).toHaveLength(1);
+    // Con tarjeta el correo se envía recién al confirmarse el pago en MP.
+    expect(mailer.sent).toHaveLength(0);
 
     const compra = db.prepare('SELECT usuario_id FROM Compras WHERE id = ?').get(res.body.compraId);
     expect(compra.usuario_id).toBe(HARDCODED_USER.id);

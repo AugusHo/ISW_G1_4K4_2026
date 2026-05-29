@@ -5,12 +5,21 @@ function buildContext({ today = '2026-06-02' } = {}) {
   const db = createDb(':memory:');
   seedReferenceData(db); // siembra horarios, tipos y el usuario hardcodeado id=1
   const usuario = { lastInsertRowid: 1 };
-  const mailer = { sent: [], async send(to, subject, body) { this.sent.push({ to, subject, body }); } };
+  const mailer = {
+    sent: [],
+    async send(to, subject, body, opts = {}) {
+      this.sent.push({ to, subject, body, attachments: opts.attachments || [] });
+    },
+  };
   const mp = {
     created: [],
+    estadoPago: null, // estado que devolverá buscarEstadoPorReferencia (simula MP)
     async createPreference(compra) {
       this.created.push(compra);
       return { id: `pref_${compra.id}`, init_point: `https://mp.test/checkout/${compra.id}` };
+    },
+    async buscarEstadoPorReferencia() {
+      return this.estadoPago;
     },
   };
   const clock = () => new Date(today + 'T10:00:00');
@@ -22,7 +31,7 @@ const VIP = 1;
 const REGULAR = 2;
 
 describe('CompraService - Comprar entradas (TDD)', () => {
-  test('compra válida con tarjeta retorna init_point de Mercado Pago y envía mail', async () => {
+  test('compra válida con tarjeta retorna init_point de Mercado Pago y NO envía mail hasta confirmar el pago', async () => {
     // martes 2026-06-02 (parque abierto), fecha futura
     const { service, mailer } = buildContext({ today: '2026-06-01' });
     const result = await service.comprar({
@@ -40,12 +49,40 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     expect(result.fechaVisita).toBe('2026-06-02');
     expect(result.montoTotal).toBe(20000 + 10000);
     expect(result.redirectUrl).toMatch(/^https:\/\/mp\.test\/checkout\//);
+    // Con tarjeta, la confirmación se envía recién cuando MP aprueba el pago.
+    expect(mailer.sent).toHaveLength(0);
+  });
+
+  test('al aprobarse el pago con tarjeta se envía la confirmación con el comprobante PDF adjunto (una sola vez)', async () => {
+    const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
+    const result = await service.comprar({
+      usuarioId: 1,
+      fechaVisita: '2026-06-02',
+      metodoPago: 'tarjeta',
+      tickets: [{ tipoTicketId: VIP, edad: 30 }],
+    });
+    expect(mailer.sent).toHaveLength(0);
+
+    // Mercado Pago reporta el pago aprobado.
+    mp.estadoPago = 'approved';
+    const estado1 = await service.consultarEstado(result.compraId);
+    expect(estado1.estado).toBe('confirmado');
     expect(mailer.sent).toHaveLength(1);
     expect(mailer.sent[0].to).toBe('visitante@ecoharmony.com');
     expect(mailer.sent[0].subject).toMatch(/confirmaci/i);
+    const adj = mailer.sent[0].attachments;
+    expect(adj).toHaveLength(1);
+    expect(adj[0].filename).toMatch(/\.pdf$/);
+    expect(Buffer.isBuffer(adj[0].content)).toBe(true);
+    // El PDF empieza con la firma "%PDF".
+    expect(adj[0].content.slice(0, 4).toString()).toBe('%PDF');
+
+    // Reconsultar no reenvía el correo (idempotente).
+    await service.consultarEstado(result.compraId);
+    expect(mailer.sent).toHaveLength(1);
   });
 
-  test('compra con efectivo no genera redirect a MP pero confirma e informa total y fecha', async () => {
+  test('compra con efectivo no genera redirect a MP pero envía confirmación con comprobante PDF', async () => {
     const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
     const result = await service.comprar({
       usuarioId: 1,
@@ -60,6 +97,8 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     expect(result.fechaVisita).toBe('2026-06-02');
     expect(mp.created).toHaveLength(0);
     expect(mailer.sent).toHaveLength(1);
+    expect(mailer.sent[0].attachments).toHaveLength(1);
+    expect(mailer.sent[0].attachments[0].filename).toMatch(/\.pdf$/);
   });
 
   test('falla si no se selecciona forma de pago', async () => {

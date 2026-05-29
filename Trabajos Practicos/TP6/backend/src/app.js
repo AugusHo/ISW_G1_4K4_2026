@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { CompraService } = require('./services/compraService');
-const { ConsoleMailer } = require('./services/mailer');
+const { ConsoleMailer, SmtpMailer } = require('./services/mailer');
 const { MercadoPagoClient, FakeMercadoPago } = require('./services/mercadoPago');
 const { catalogoRoutes } = require('./routes/catalogo');
 const { comprasRoutes } = require('./routes/compras');
@@ -24,12 +24,35 @@ function buildMercadoPago() {
   });
 }
 
+// Devuelve el mailer real (SMTP/Gmail) si hay credenciales configuradas
+// (MAIL_USER + MAIL_PASS), o el ConsoleMailer en caso contrario.
+function buildMailer() {
+  const user = process.env.MAIL_USER;
+  const pass = process.env.MAIL_PASS;
+  if (!user || !pass) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('[Mailer] MAIL_USER/MAIL_PASS no configurados: usando ConsoleMailer (no se envían correos reales).');
+    }
+    return new ConsoleMailer();
+  }
+  return new SmtpMailer({
+    user,
+    pass,
+    from: process.env.MAIL_FROM || `EcoHarmony Park <${user}>`,
+    to: process.env.MAIL_TO || null,
+    service: process.env.MAIL_SERVICE || 'gmail',
+    host: process.env.MAIL_HOST || null,
+    port: process.env.MAIL_PORT ? Number(process.env.MAIL_PORT) : null,
+    secure: process.env.MAIL_SECURE === 'true',
+  });
+}
+
 function createApp({ db, mailer, mp }) {
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  const _mailer = mailer || new ConsoleMailer();
+  const _mailer = mailer || buildMailer();
   const _mp = mp || buildMercadoPago();
   const service = new CompraService({ db, mailer: _mailer, mp: _mp });
 

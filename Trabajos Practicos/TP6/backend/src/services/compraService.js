@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { generarComprobantePDF, formatearFecha, formatearMonto } = require('./comprobante');
 
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const METODOS_PAGO = ['efectivo', 'tarjeta'];
@@ -80,12 +81,13 @@ class CompraService {
       redirectUrl = pref.init_point;
     }
 
-    await this.mailer.send(
-      usuario.email,
-      'Confirmación de compra - EcoHarmony Park',
-      `Hola ${usuario.nombre}, recibimos tu compra de ${tickets.length} entrada(s) ` +
-        `para el ${fechaVisita}. Monto total: $${montoTotal}.`
-    );
+    // El correo de confirmación con el comprobante en PDF se envía cuando la
+    // compra queda confirmada:
+    //  - Efectivo: queda confirmada al registrarse (se abona en boletería).
+    //  - Tarjeta: cuando Mercado Pago aprueba el pago (ver consultarEstado()).
+    if (metodoPago === 'efectivo') {
+      await this._enviarConfirmacion(compraId);
+    }
 
     return {
       compraId,
@@ -116,6 +118,11 @@ class CompraService {
         if (nuevoEstado !== compra.estado) {
           this.db.prepare('UPDATE Compras SET estado = ? WHERE id = ?').run(nuevoEstado, compraId);
           compra.estado = nuevoEstado;
+          // Pago aprobado por Mercado Pago: recién acá enviamos la confirmación
+          // con el comprobante. La transición solo ocurre una vez (idempotente).
+          if (nuevoEstado === 'confirmado') {
+            await this._enviarConfirmacion(compraId);
+          }
         }
       }
     }
@@ -129,6 +136,62 @@ class CompraService {
       montoTotal: compra.monto_total,
       metodoPago: compra.metodo_pago,
     };
+  }
+
+  // Arma y envía el correo de confirmación con el comprobante en PDF adjunto.
+  // No relanza errores: si falla el envío o la generación del PDF, lo loguea
+  // pero no rompe la compra (que ya está persistida).
+  async _enviarConfirmacion(compraId) {
+    try {
+      const compra = this.db.prepare('SELECT * FROM Compras WHERE id = ?').get(compraId);
+      if (!compra) return;
+      const usuario = this.db.prepare('SELECT * FROM Usuarios WHERE id = ?').get(compra.usuario_id);
+      const tickets = this.db
+        .prepare(
+          `SELECT t.*, tt.nombre AS tipo_nombre, tt.precio AS tipo_precio
+             FROM Tickets t
+             JOIN TiposTicket tt ON tt.id = t.tipo_ticket_id
+            WHERE t.compra_id = ?`
+        )
+        .all(compraId);
+
+      let pdf = null;
+      try {
+        pdf = await generarComprobantePDF({ compra, tickets, usuario });
+      } catch (e) {
+        console.error('[Comprobante] No se pudo generar el PDF:', e.message);
+      }
+
+      const cierre =
+        compra.metodo_pago === 'efectivo'
+          ? 'Recordá abonar en boletería el día de tu visita. Presentá el comprobante adjunto al ingresar.'
+          : 'Tu pago fue aprobado. Presentá el comprobante adjunto (con los códigos QR) al ingresar.';
+
+      const body =
+        `Hola ${usuario.nombre},\n\n` +
+        `¡Gracias por tu compra en EcoHarmony Park!\n\n` +
+        `Compra #${compra.id}\n` +
+        `Entradas: ${tickets.length}\n` +
+        `Fecha de visita: ${formatearFecha(compra.fecha_visita)}\n` +
+        `Forma de pago: ${compra.metodo_pago === 'tarjeta' ? 'Tarjeta (Mercado Pago)' : 'Efectivo en boletería'}\n` +
+        `Total: ${formatearMonto(compra.monto_total)}\n\n` +
+        `${cierre}\n\n` +
+        `Adjuntamos el comprobante en PDF con el detalle de tus entradas.\n\n` +
+        `EcoHarmony Park`;
+
+      const attachments = pdf
+        ? [{ filename: `comprobante-compra-${compra.id}.pdf`, content: pdf, contentType: 'application/pdf' }]
+        : [];
+
+      await this.mailer.send(
+        usuario.email,
+        'Confirmación de compra - EcoHarmony Park',
+        body,
+        { attachments }
+      );
+    } catch (e) {
+      console.error('[Mail] No se pudo enviar la confirmación de compra:', e.message);
+    }
   }
 
   _validarMetodoPago(metodoPago) {
