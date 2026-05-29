@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@heroui/react';
-import { Leaf, ArrowLeft, Monitor, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DIA, MES, sameDay, esFeriado } from '../lib/format';
+import logo from '../assets/logo.png';
 
 /* ---------- Calendar (custom) ---------- */
 // `diasAbiertos` es el set de días de semana abiertos ('lunes', 'martes', ...) que viene del backend.
@@ -117,9 +118,7 @@ export function AppBar({
           <ArrowLeft className="size-5" />
         </Button>
       ) : (
-        <span className="grid size-9 shrink-0 place-items-center rounded-full text-white" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a5))' }}>
-          <Leaf className="size-[18px]" />
-        </span>
+        <img src={logo} alt="EcoHarmony Park" className="size-9 shrink-0 rounded-full object-cover ring-1 ring-emerald-900/10" />
       )}
       <div className="min-w-0 flex-1">
         <div className="truncate font-display text-[15px] font-bold leading-tight text-slate-900">{title}</div>
@@ -160,9 +159,7 @@ export function Navbar({
     <header className="sticky top-0 z-30 border-b border-emerald-900/[0.06] bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-3">
         <button type="button" onClick={onHome} className="flex items-center gap-2.5" aria-label="Inicio">
-          <span className="grid size-9 place-items-center rounded-xl text-white" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a5))' }}>
-            <Leaf className="size-[18px]" />
-          </span>
+          <img src={logo} alt="EcoHarmony Park" className="size-10 rounded-full object-cover ring-1 ring-emerald-900/10" />
           <span className="font-display text-[17px] font-bold tracking-tight text-slate-900">EcoHarmony Park</span>
         </button>
         <div className="ml-auto flex items-center gap-3">

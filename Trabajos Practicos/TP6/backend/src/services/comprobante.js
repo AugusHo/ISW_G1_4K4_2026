@@ -1,7 +1,11 @@
 // Generación del comprobante de compra en PDF para EcoHarmony Park.
 // Devuelve un Buffer con el PDF, listo para adjuntar en el correo de confirmación.
+const path = require('path');
+const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
+
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
 
 const VERDE = '#386641';
 const VERDE_CLARO = '#6a994e';
@@ -54,8 +58,23 @@ async function generarComprobantePDF({ compra, tickets, usuario }) {
 
   // ---- Encabezado ----
   doc.rect(0, 0, doc.page.width, 110).fill(VERDE);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(24).text('EcoHarmony Park', left, 38);
-  doc.font('Helvetica').fontSize(12).fillColor('#dfe7d8').text('Comprobante de compra de entradas', left, 70);
+
+  // Logo: badge circular blanco con el emblema recortado al centro.
+  let textoX = left;
+  if (fs.existsSync(LOGO_PATH)) {
+    const r = 30;
+    const cx = left + r;
+    const cy = 55;
+    doc.circle(cx, cy, r + 3).fill('#ffffff');
+    doc.save();
+    doc.circle(cx, cy, r).clip();
+    doc.image(LOGO_PATH, cx - r, cy - r, { cover: [r * 2, r * 2], align: 'center', valign: 'center' });
+    doc.restore();
+    textoX = cx + r + 16;
+  }
+
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(22).text('EcoHarmony Park', textoX, 38);
+  doc.font('Helvetica').fontSize(11).fillColor('#dfe7d8').text('Comprobante de compra de entradas', textoX, 68);
 
   let y = 140;
   doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(16).text(`Compra #${compra.id}`, left, y);

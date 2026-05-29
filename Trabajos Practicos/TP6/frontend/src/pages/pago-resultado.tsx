@@ -4,6 +4,7 @@ import { Card, Button, Spinner, Separator } from '@heroui/react';
 import { Leaf, Mail, Clock3, X, Info, Ticket } from 'lucide-react';
 import { ARS, fmtISOLong } from '../lib/format';
 import { api } from '../lib/api';
+import logo from '../assets/logo.png';
 
 interface EstadoCompra {
   compraId: number;
@@ -141,8 +142,8 @@ export default function PagoResultado() {
       {compra && (
         <Card className="overflow-hidden border-emerald-900/[0.06]">
           <div className="p-5 text-white" style={{ background: 'linear-gradient(120deg,var(--p6),var(--a6))' }}>
-            <div className="flex items-center gap-2">
-              <Leaf className="size-5" />
+            <div className="flex items-center gap-2.5">
+              <img src={logo} alt="EcoHarmony Park" className="size-9 shrink-0 rounded-full bg-white object-cover ring-2 ring-white/60" />
               <span className="font-display font-bold tracking-tight">EcoHarmony Park</span>
             </div>
             <div className="mt-3 flex items-center gap-2 font-display text-lg font-semibold">
