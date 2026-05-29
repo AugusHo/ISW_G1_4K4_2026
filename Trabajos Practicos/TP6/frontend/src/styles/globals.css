@@ -23,6 +23,15 @@
   --a6: #4d9a16;
   --screen-bg: #f7fbf8;
   --stage-bg: #eef5f0;
+
+  /* Mapear el "accent" de HeroUI a la paleta verde de EcoHarmony.
+     Los tokens --accent-soft / -hover / -foreground derivan de éste. */
+  --accent: #10b981;
+
+  /* Campos (Input, NumberField, Calendar): relleno y borde visibles sobre blanco. */
+  --field-background: var(--surface-secondary);
+  --field-border: var(--border);
+  --field-border-width: 1px;
 }
 
 * { box-sizing: border-box; }

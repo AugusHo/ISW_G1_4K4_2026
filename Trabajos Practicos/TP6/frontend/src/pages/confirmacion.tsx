@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Card, Button, Separator } from '@heroui/react';
 import { Leaf, Mail, Info, Ticket } from 'lucide-react';
-import { Glass, PrimaryBtn } from '../components/ui';
 import { ARS, fmtISOLong } from '../lib/format';
 
 interface CompraState {
@@ -11,10 +11,10 @@ interface CompraState {
   metodoPago: string;
 }
 
-function Info2({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Dato({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div>
-      <div className="mb-0.5 text-[11px] text-slate-400">{label}</div>
+      <div className="mb-0.5 text-[11px] text-muted">{label}</div>
       <div className={`${strong ? 'font-poppins text-[16px] font-bold' : 'text-[13.5px] font-medium'} text-slate-800`}>{value}</div>
     </div>
   );
@@ -27,9 +27,9 @@ export default function Confirmacion() {
 
   if (!compra) {
     return (
-      <div className="flex flex-col items-center gap-4 px-4 py-12 text-center">
-        <p className="text-slate-500">No hay ninguna compra para mostrar.</p>
-        <div className="w-full max-w-xs"><PrimaryBtn onClick={() => nav('/')}><Leaf className="size-4" />Volver al inicio</PrimaryBtn></div>
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-12 text-center">
+        <p className="text-muted">No hay ninguna compra para mostrar.</p>
+        <Button variant="primary" onPress={() => nav('/')}><Leaf className="size-4" />Volver al inicio</Button>
       </div>
     );
   }
@@ -47,13 +47,12 @@ export default function Confirmacion() {
         <p className="mt-1.5 px-2 text-[14px] text-slate-600">
           Reservaste <b>{compra.cantidad} {compra.cantidad === 1 ? 'entrada' : 'entradas'}</b> para el <b className="capitalize">{fmtISOLong(compra.fechaVisita)}</b>.
         </p>
-        <div className="mt-3 flex items-center gap-2 rounded-full bg-emerald-500/10 px-3.5 py-2 text-[13px] font-medium text-emerald-800">
+        <div className="mt-3 flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-2 text-[13px] font-medium text-accent-soft-foreground">
           <Mail className="size-4" />Enviamos la confirmación a tu correo
         </div>
       </div>
 
-      {/* Ticket */}
-      <Glass className="overflow-hidden">
+      <Card className="overflow-hidden border-emerald-900/[0.06]">
         <div className="p-5 text-white" style={{ background: 'linear-gradient(120deg,var(--p6),var(--a6))' }}>
           <div className="flex items-center gap-2">
             <Leaf className="size-5" />
@@ -63,22 +62,19 @@ export default function Confirmacion() {
             <Ticket className="size-5" />Entradas confirmadas
           </div>
         </div>
-        <div className="relative h-0">
-          <span className="absolute -left-2.5 -top-2.5 size-5 rounded-full bg-[var(--screen-bg)]" />
-          <span className="absolute -right-2.5 -top-2.5 size-5 rounded-full bg-[var(--screen-bg)]" />
-          <div className="absolute left-3 right-3 top-0 border-t-2 border-dashed border-emerald-900/15" />
-        </div>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-4 p-5">
-          <Info2 label="Fecha de visita" value={fmtISOLong(compra.fechaVisita)} />
-          <Info2 label="Entradas" value={`${compra.cantidad} ${compra.cantidad === 1 ? 'persona' : 'personas'}`} />
-          <Info2 label="Forma de pago" value={compra.metodoPago === 'tarjeta' ? 'Tarjeta (Mercado Pago)' : 'Efectivo en boletería'} />
-          <Info2 label="Total" value={ARS(compra.montoTotal)} strong />
-          {compra.compraId != null && <Info2 label="N° de compra" value={`#${compra.compraId}`} />}
-          <Info2 label="Estado" value={compra.metodoPago === 'tarjeta' ? 'Pagada' : 'A abonar en ingreso'} />
-        </div>
-      </Glass>
+        <Card.Content>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+            <Dato label="Fecha de visita" value={fmtISOLong(compra.fechaVisita)} />
+            <Dato label="Entradas" value={`${compra.cantidad} ${compra.cantidad === 1 ? 'persona' : 'personas'}`} />
+            <Dato label="Forma de pago" value={compra.metodoPago === 'tarjeta' ? 'Tarjeta (Mercado Pago)' : 'Efectivo en boletería'} />
+            <Dato label="Total" value={ARS(compra.montoTotal)} strong />
+            {compra.compraId != null && <Dato label="N° de compra" value={`#${compra.compraId}`} />}
+            <Dato label="Estado" value={compra.metodoPago === 'tarjeta' ? 'Pagada' : 'A abonar en ingreso'} />
+          </div>
+        </Card.Content>
+      </Card>
 
-      <div className="mt-4 flex items-start gap-2 px-1 text-[12.5px] text-slate-500">
+      <div className="mt-4 flex items-start gap-2 px-1 text-[12.5px] text-muted">
         <Info className="mt-px size-4 shrink-0" style={{ color: 'var(--p5)' }} />
         <span>
           {compra.metodoPago === 'tarjeta'
@@ -87,7 +83,8 @@ export default function Confirmacion() {
         </span>
       </div>
 
-      <div className="mt-5"><PrimaryBtn onClick={() => nav('/')}><Leaf className="size-4" />Volver al inicio</PrimaryBtn></div>
+      <Separator className="my-5" />
+      <Button variant="primary" className="w-full" onPress={() => nav('/')}><Leaf className="size-4" />Volver al inicio</Button>
     </div>
   );
 }
