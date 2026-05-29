@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=JetBrains+Mono:wght@500;700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -54,13 +54,13 @@
 html, body, #root { height: 100%; margin: 0; }
 
 body {
-  font-family: "Inter", sans-serif;
+  font-family: "Lato", sans-serif;
   -webkit-font-smoothing: antialiased;
   background: var(--stage-bg);
   color: #1e293b;
 }
 
-.font-poppins { font-family: "Poppins", sans-serif; }
+.font-display { font-family: "Lato", sans-serif; }
 .font-mono { font-family: "JetBrains Mono", monospace; }
 
 /* --- Stage + phone-like screen --- */

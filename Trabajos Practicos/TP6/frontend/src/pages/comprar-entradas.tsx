@@ -50,7 +50,7 @@ function Seccion({
         <div className="flex w-full items-center gap-2.5">
           <span className="grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a5))' }}>{n}</span>
           <Icon className="size-[18px] shrink-0 text-emerald-700" />
-          <Card.Title className="font-poppins text-[15px]">{title}</Card.Title>
+          <Card.Title className="font-display text-[15px]">{title}</Card.Title>
           {hint && <span className="ml-auto text-[11px] text-muted">{hint}</span>}
         </div>
       </Card.Header>
@@ -175,7 +175,7 @@ export default function ComprarEntradas() {
     <div className="relative animate-fade-in-up overflow-hidden rounded-[1.6rem] p-5 text-white sm:p-6" style={{ background: 'linear-gradient(130deg,var(--p6),var(--a6))' }}>
       <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 85% 15%,#fff 0,transparent 40%),radial-gradient(circle at 10% 90%,#fff 0,transparent 35%)' }} />
       <div className="relative">
-        <h2 className="font-poppins text-2xl font-bold leading-tight sm:text-3xl">Reservá tu visita</h2>
+        <h2 className="font-display text-2xl font-bold leading-tight sm:text-3xl">Reservá tu visita</h2>
         <p className="mt-1 text-[13px] text-white/85 sm:text-sm">Asegurá tu lugar en EcoHarmony Park en pocos pasos.</p>
       </div>
     </div>
@@ -191,8 +191,8 @@ export default function ComprarEntradas() {
         </div>
         <Separator className="my-2" />
         <div className="flex items-center justify-between">
-          <span className="font-poppins font-semibold text-slate-700">Total</span>
-          <span className="bg-clip-text font-poppins text-2xl font-bold text-transparent" style={{ backgroundImage: 'linear-gradient(135deg,var(--p6),var(--a6))' }}>{ARS(total)}</span>
+          <span className="font-display font-semibold text-slate-700">Total</span>
+          <span className="bg-clip-text font-display text-2xl font-bold text-transparent" style={{ backgroundImage: 'linear-gradient(135deg,var(--p6),var(--a6))' }}>{ARS(total)}</span>
         </div>
       </Card.Content>
     </Card>
@@ -251,9 +251,9 @@ export default function ComprarEntradas() {
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl text-white" style={{ background: vip ? 'linear-gradient(135deg,var(--a6),var(--p6))' : 'linear-gradient(135deg,var(--p4),var(--a5))' }}>
                   <I className="size-5" />
                 </span>
-                <h4 className="min-w-0 flex-1 font-poppins text-[15px] font-semibold text-slate-800">Pase {tipo.nombre}</h4>
+                <h4 className="min-w-0 flex-1 font-display text-[15px] font-semibold text-slate-800">Pase {tipo.nombre}</h4>
                 <div className="shrink-0 text-right">
-                  <span className="font-poppins text-lg font-bold text-slate-900">{ARS(tipo.precio)}</span>
+                  <span className="font-display text-lg font-bold text-slate-900">{ARS(tipo.precio)}</span>
                   <span className="text-[11px] text-muted"> /pers.</span>
                 </div>
               </div>
@@ -326,7 +326,7 @@ export default function ComprarEntradas() {
             <Radio.Content>
               <div className="flex items-center gap-2">
                 <img src={mpLogo} alt="Mercado Pago" className="h-5 w-auto" />
-                <span className="font-poppins text-[14.5px] font-semibold">Tarjeta</span>
+                <span className="font-display text-[14.5px] font-semibold">Tarjeta</span>
                 <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-accent-soft-foreground">Recomendado</span>
               </div>
               <span className="text-[12px] text-muted">Pago seguro vía Mercado Pago</span>
@@ -337,7 +337,7 @@ export default function ComprarEntradas() {
             <Radio.Content>
               <div className="flex items-center gap-2">
                 <Banknote className="size-5 text-emerald-600" />
-                <span className="font-poppins text-[14.5px] font-semibold">Efectivo</span>
+                <span className="font-display text-[14.5px] font-semibold">Efectivo</span>
               </div>
               <span className="text-[12px] text-muted">Abonás al ingresar, en boletería</span>
             </Radio.Content>
@@ -377,7 +377,7 @@ export default function ComprarEntradas() {
             <Separator className="my-3" />
             <div className="flex items-center justify-between">
               <span className="text-[13px] text-muted">Forma de pago: <span className="font-medium capitalize text-foreground">{metodoPago}</span></span>
-              <span className="font-poppins text-lg font-bold">{ARS(total)}</span>
+              <span className="font-display text-lg font-bold">{ARS(total)}</span>
             </div>
             {esTarjeta && (
               <Alert status="accent" className="mt-3">

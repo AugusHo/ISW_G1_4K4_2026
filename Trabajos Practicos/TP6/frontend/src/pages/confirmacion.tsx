@@ -15,7 +15,7 @@ function Dato({ label, value, strong }: { label: string; value: string; strong?:
   return (
     <div>
       <div className="mb-0.5 text-[11px] text-muted">{label}</div>
-      <div className={`${strong ? 'font-poppins text-[16px] font-bold' : 'text-[13.5px] font-medium'} text-slate-800`}>{value}</div>
+      <div className={`${strong ? 'font-display text-[16px] font-bold' : 'text-[13.5px] font-medium'} text-slate-800`}>{value}</div>
     </div>
   );
 }
@@ -43,7 +43,7 @@ export default function Confirmacion() {
             <path className="check-path" d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h2 className="font-poppins text-2xl font-bold text-slate-900">¡Compra registrada!</h2>
+        <h2 className="font-display text-2xl font-bold text-slate-900">¡Compra registrada!</h2>
         <p className="mt-1.5 px-2 text-[14px] text-slate-600">
           Reservaste <b>{compra.cantidad} {compra.cantidad === 1 ? 'entrada' : 'entradas'}</b> para el <b className="capitalize">{fmtISOLong(compra.fechaVisita)}</b>.
         </p>
@@ -56,9 +56,9 @@ export default function Confirmacion() {
         <div className="p-5 text-white" style={{ background: 'linear-gradient(120deg,var(--p6),var(--a6))' }}>
           <div className="flex items-center gap-2">
             <Leaf className="size-5" />
-            <span className="font-poppins font-bold tracking-tight">EcoHarmony Park</span>
+            <span className="font-display font-bold tracking-tight">EcoHarmony Park</span>
           </div>
-          <div className="mt-3 flex items-center gap-2 font-poppins text-lg font-semibold">
+          <div className="mt-3 flex items-center gap-2 font-display text-lg font-semibold">
             <Ticket className="size-5" />Entradas confirmadas
           </div>
         </div>

@@ -38,7 +38,7 @@ export function Calendar({
         <button type="button" className={navBtn} disabled={!canPrev} onClick={() => setView(new Date(y, m - 1, 1))}>
           <ChevronLeft className="size-5" />
         </button>
-        <span className="font-poppins text-[15px] font-semibold capitalize text-slate-700">{MES[m]} {y}</span>
+        <span className="font-display text-[15px] font-semibold capitalize text-slate-700">{MES[m]} {y}</span>
         <button type="button" className={navBtn} onClick={() => setView(new Date(y, m + 1, 1))}>
           <ChevronRight className="size-5" />
         </button>
@@ -122,7 +122,7 @@ export function AppBar({
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <div className="truncate font-poppins text-[15px] font-bold leading-tight text-slate-900">{title}</div>
+        <div className="truncate font-display text-[15px] font-bold leading-tight text-slate-900">{title}</div>
         {subtitle && <div className="text-[11px] leading-tight text-emerald-700">{subtitle}</div>}
       </div>
       {onToggleVista && (
@@ -163,7 +163,7 @@ export function Navbar({
           <span className="grid size-9 place-items-center rounded-xl text-white" style={{ background: 'linear-gradient(135deg,var(--p5),var(--a5))' }}>
             <Leaf className="size-[18px]" />
           </span>
-          <span className="font-poppins text-[17px] font-bold tracking-tight text-slate-900">EcoHarmony Park</span>
+          <span className="font-display text-[17px] font-bold tracking-tight text-slate-900">EcoHarmony Park</span>
         </button>
         <div className="ml-auto flex items-center gap-3">
           {onToggleVista && (
