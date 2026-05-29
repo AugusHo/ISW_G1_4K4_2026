@@ -1,7 +1,6 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=JetBrains+Mono:wght@500;700&display=swap");
 @import "tailwindcss";
 @import "@heroui/styles";
-
-@import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=JetBrains+Mono:wght@500;700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
