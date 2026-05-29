@@ -7,26 +7,42 @@
 
 @theme {
   --breakpoint-xs: 25rem;
-  /* Paleta verde EcoHarmony */
-  --color-p4: #34d399;
-  --color-p5: #10b981;
-  --color-p6: #059669;
-  --color-a5: #84cc16;
-  --color-a6: #4d9a16;
+
+  /* ────────── Paleta EcoHarmony ──────────
+     Hunter Green   #386641  ·  Sage Green   #6a994e
+     Yellow Green   #a7c957  ·  Champagne    #f2e8cf
+     Blushed Brick  #bc4749
+     La rampa verde→amarillo-verde alimenta los gradientes de marca. */
+  --color-p4: #8cb85f; /* verde claro (extremo claro de los gradientes) */
+  --color-p5: #6a994e; /* Sage Green — acento principal */
+  --color-p6: #386641; /* Hunter Green — verde más oscuro */
+  --color-a5: #a7c957; /* Yellow Green — acento vivo */
+  --color-a6: #7a9e3f; /* oliva (extremo oscuro de los gradientes a) */
+  --color-champagne: #f2e8cf; /* Champagne Mist — fondos cálidos */
+  --color-brick: #bc4749; /* Blushed Brick — alertas / rechazos */
+
+  /* Mapear la escala `emerald` de Tailwind a la paleta de marca para que
+     todas las clases emerald-* existentes adopten los verdes nuevos. */
+  --color-emerald-500: #6a994e;
+  --color-emerald-600: #557a3e;
+  --color-emerald-700: #4a6b37;
+  --color-emerald-900: #386641;
 }
 
 :root {
-  --p4: #34d399;
-  --p5: #10b981;
-  --p6: #059669;
-  --a5: #84cc16;
-  --a6: #4d9a16;
-  --screen-bg: #f7fbf8;
-  --stage-bg: #eef5f0;
+  --p4: #8cb85f;
+  --p5: #6a994e;
+  --p6: #386641;
+  --a5: #a7c957;
+  --a6: #7a9e3f;
+  --champagne: #f2e8cf;
+  --brick: #bc4749;
+  --screen-bg: #fcf9ef;
+  --stage-bg: #f2e8cf;
 
   /* Mapear el "accent" de HeroUI a la paleta verde de EcoHarmony.
      Los tokens --accent-soft / -hover / -foreground derivan de éste. */
-  --accent: #10b981;
+  --accent: #6a994e;
 
   /* Campos (Input, NumberField, Calendar): relleno y borde visibles sobre blanco. */
   --field-background: var(--surface-secondary);
@@ -68,8 +84,8 @@ body {
   background: var(--screen-bg);
   border-radius: 34px;
   overflow: hidden;
-  border: 1px solid rgba(6, 78, 59, 0.08);
-  box-shadow: 0 40px 90px -30px rgba(6, 78, 59, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  border: 1px solid rgba(56, 102, 65, 0.1);
+  box-shadow: 0 40px 90px -30px rgba(56, 102, 65, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
 }
 
 .screen main::-webkit-scrollbar { width: 0; }

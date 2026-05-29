@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState, type ReactNode, type ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Button, Calendar, NumberField, RadioGroup, Radio,
+  Card, Button, NumberField, RadioGroup, Radio,
   Alert, Separator, Modal, Label, toast,
 } from '@heroui/react';
-import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 import {
   CalendarDays, Ticket, Users, Lock, Crown, Banknote, ShieldCheck, Clock3, Info,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { ARS, fmtISOLong, esFeriado } from '../lib/format';
+import { ARS, fmtISOLong, toISO } from '../lib/format';
 import { useVista } from '../lib/vista';
+import { Calendar } from '../components/ui';
 import mpLogo from '../assets/MercadoPago.png';
 
 interface TipoTicket { id: number; nombre: string; precio: number; }
@@ -18,7 +18,6 @@ interface Horario { dia_semana: string; hora_apertura: string; hora_cierre: stri
 interface TicketForm { tipoTicketId: string; edad: number | null; }
 type Errores = { fecha?: string; pago?: string; visitantes?: string };
 
-const DOW = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const ORDEN_DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const DIA_LABEL: Record<string, string> = {
   lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves',
@@ -63,7 +62,7 @@ function Seccion({
 export default function ComprarEntradas() {
   const [tipos, setTipos] = useState<TipoTicket[]>([]);
   const [horarios, setHorarios] = useState<Horario[]>([]);
-  const [fecha, setFecha] = useState<DateValue | null>(null);
+  const [fecha, setFecha] = useState<Date | null>(null);
   const [cantidad, setCantidad] = useState(1);
   const [tickets, setTickets] = useState<TicketForm[]>([{ tipoTicketId: '', edad: null }]);
   const [metodoPago, setMetodoPago] = useState('');
@@ -73,8 +72,6 @@ export default function ComprarEntradas() {
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
   const esDesktop = useVista() === 'desktop';
-
-  const hoy = today(getLocalTimeZone());
 
   useEffect(() => {
     Promise.all([api.tipos(), api.horarios()])
@@ -97,16 +94,9 @@ export default function ComprarEntradas() {
   const tipoBarato = useMemo(() => [...tipos].sort((a, b) => a.precio - b.precio)[0], [tipos]);
   const total = tickets.reduce((acc, t) => acc + (tipoById[t.tipoTicketId]?.precio ?? 0), 0);
   const esTarjeta = metodoPago === 'tarjeta';
-  const fechaISO = fecha ? fecha.toString() : '';
+  const fechaISO = fecha ? toISO(fecha) : '';
 
   const clearErr = (k: keyof Errores) => setErrores((e) => ({ ...e, [k]: undefined }));
-
-  // Día no disponible: cerrado por día de semana (según tabla Horarios) o feriado.
-  function isDateUnavailable(date: DateValue) {
-    const d = date.toDate(getLocalTimeZone());
-    const cerradoSemana = diasAbiertos.size > 0 && !diasAbiertos.has(DOW[d.getDay()]);
-    return cerradoSemana || esFeriado(d);
-  }
 
   function setCantidadYTickets(v: number) {
     const n = Math.max(1, Math.min(10, Number.isNaN(v) ? 1 : v));
@@ -243,23 +233,10 @@ export default function ComprarEntradas() {
           </div>
         )}
         <Calendar
-          aria-label="Fecha de visita"
-          className="w-full"
-          value={fecha}
-          minValue={hoy}
-          isDateUnavailable={isDateUnavailable}
-          onChange={(v) => { setFecha(v); clearErr('fecha'); }}
-        >
-          <Calendar.Header>
-            <Calendar.Heading />
-            <Calendar.NavButton slot="previous" />
-            <Calendar.NavButton slot="next" />
-          </Calendar.Header>
-          <Calendar.Grid>
-            <Calendar.GridHeader>{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}</Calendar.GridHeader>
-            <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-          </Calendar.Grid>
-        </Calendar>
+          selected={fecha}
+          onSelect={(d) => { setFecha(d); clearErr('fecha'); }}
+          diasAbiertos={diasAbiertos}
+        />
         {errores.fecha && <p className="mt-2 text-[12.5px] font-medium text-danger">{errores.fecha}</p>}
       </Seccion>
 
@@ -434,7 +411,7 @@ export default function ComprarEntradas() {
           )}
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
             <div className="flex flex-col gap-4">{secciones}</div>
-            <aside className="flex flex-col gap-3 lg:sticky lg:top-6">
+            <aside className="flex flex-col gap-3 lg:sticky lg:top-20">
               {resumen}
               {cta}
               <p className="text-center text-[11px] text-muted">Compra disponible solo para usuarios registrados</p>

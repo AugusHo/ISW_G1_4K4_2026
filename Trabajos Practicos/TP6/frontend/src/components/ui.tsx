@@ -1,5 +1,88 @@
+import { useMemo, useState } from 'react';
 import { Button } from '@heroui/react';
-import { Leaf, ArrowLeft, Monitor, Smartphone } from 'lucide-react';
+import { Leaf, ArrowLeft, Monitor, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DIA, MES, sameDay, esFeriado } from '../lib/format';
+
+/* ---------- Calendar (custom) ---------- */
+// `diasAbiertos` es el set de días de semana abiertos ('lunes', 'martes', ...) que viene del backend.
+const DOW = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+export function Calendar({
+  selected, onSelect, diasAbiertos,
+}: {
+  selected: Date | null;
+  onSelect: (d: Date) => void;
+  diasAbiertos: Set<string>;
+}) {
+  const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }, []);
+  const [view, setView] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const y = view.getFullYear();
+  const m = view.getMonth();
+  const firstDow = new Date(y, m, 1).getDay();
+  const days = new Date(y, m + 1, 0).getDate();
+
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(new Date(y, m, d));
+
+  const canPrev = new Date(y, m, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
+  const navBtn =
+    'grid size-9 place-items-center rounded-full text-slate-500 transition hover:bg-emerald-500/10 disabled:opacity-25 disabled:hover:bg-transparent';
+
+  const isClosed = (d: Date) =>
+    (diasAbiertos.size > 0 && !diasAbiertos.has(DOW[d.getDay()])) || esFeriado(d);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" className={navBtn} disabled={!canPrev} onClick={() => setView(new Date(y, m - 1, 1))}>
+          <ChevronLeft className="size-5" />
+        </button>
+        <span className="font-poppins text-[15px] font-semibold capitalize text-slate-700">{MES[m]} {y}</span>
+        <button type="button" className={navBtn} onClick={() => setView(new Date(y, m + 1, 1))}>
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
+      <div className="mb-1 grid grid-cols-7 gap-1">
+        {DIA.map((d) => (
+          <div key={d} className="py-1 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />;
+          const past = d < today;
+          const closed = isClosed(d);
+          const disabled = past || closed;
+          const sel = sameDay(d, selected);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(d)}
+              className={`relative aspect-square rounded-xl text-[13.5px] font-medium transition ${
+                sel ? 'font-bold text-white'
+                  : disabled ? 'text-slate-300 line-through decoration-1'
+                  : 'text-slate-700 hover:bg-emerald-500/10'
+              }`}
+              style={sel ? { background: 'linear-gradient(135deg,var(--p5),var(--a6))', boxShadow: '0 6px 14px -6px var(--p6)' } : {}}
+            >
+              {d.getDate()}
+              {sameDay(d, today) && !sel && (
+                <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full" style={{ background: 'var(--p5)' }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[11.5px] text-slate-400">
+        <span className="line-through decoration-1">cerrado</span>
+        <span>· lunes y feriados (25 dic · 1 ene)</span>
+      </div>
+    </div>
+  );
+}
 
 /* ---------- Aurora background (vista móvil) ---------- */
 export function Aurora() {

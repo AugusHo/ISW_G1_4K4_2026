@@ -26,14 +26,14 @@ const TEXTO: Record<string, { titulo: string; detalle: string; tono: 'success' |
 const GRAD: Record<'success' | 'warning' | 'danger', string> = {
   success: 'linear-gradient(135deg,var(--p5),var(--a5))',
   warning: 'linear-gradient(135deg,#f59e0b,#d97706)',
-  danger: 'linear-gradient(135deg,#f43f5e,#e11d48)',
+  danger: 'linear-gradient(135deg,#cf5e60,var(--brick))',
 };
 
 const MAX_REINTENTOS = 4;
 
 function IconoResultado({ tono }: { tono: 'success' | 'warning' | 'danger' }) {
   return (
-    <div className="relative grid size-20 place-items-center rounded-full animate-pop-in" style={{ background: GRAD[tono], boxShadow: '0 16px 36px -12px rgba(6,78,59,0.45)' }}>
+    <div className="relative grid size-20 place-items-center rounded-full animate-pop-in" style={{ background: GRAD[tono], boxShadow: '0 16px 36px -12px rgba(56,102,65,0.45)' }}>
       {tono === 'success' && <span className="absolute inset-0 animate-ping rounded-full opacity-30" style={{ background: 'var(--p5)' }} />}
       {tono === 'success' ? (
         <svg viewBox="0 0 24 24" fill="none" className="relative size-10 text-white" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">

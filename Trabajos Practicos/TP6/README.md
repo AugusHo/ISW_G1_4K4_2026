@@ -6,6 +6,25 @@ aplicando el ciclo **Red → Green → Refactor**.
 - **Backend:** Node.js + Express + SQLite (`better-sqlite3`) + Jest + Supertest
 - **Frontend:** Vite + React + HeroUI + TailwindCSS
 
+## Paleta de colores
+
+La identidad visual usa una paleta natural verde con un cálido cremoso y un rojo
+ladrillo para alertas. Vive en `frontend/src/styles/globals.css` como variables
+CSS (`--p4..--p6`, `--a5/--a6`, `--champagne`, `--brick`) y, además, sobrescribe
+la escala `emerald-*` de Tailwind para que las utilidades existentes adopten la
+paleta automáticamente.
+
+| Color           | Hex       | Variable           | Uso                                                        |
+|-----------------|-----------|--------------------|------------------------------------------------------------|
+| Hunter Green    | `#386641` | `--p6`             | Verde más oscuro: extremo de gradientes, bordes, sombras   |
+| Sage Green      | `#6a994e` | `--p5` / `--accent`| Acento principal (botones, foco, indicadores)              |
+| Yellow Green    | `#a7c957` | `--a5`             | Acento vivo: brillo de gradientes de marca                 |
+| Champagne Mist  | `#f2e8cf` | `--champagne`      | Fondo cálido de la página / escenario                      |
+| Blushed Brick   | `#bc4749` | `--brick`          | Alertas y pagos rechazados                                 |
+
+> Verdes auxiliares derivados: `--p4 #8cb85f` (verde claro) y `--a6 #7a9e3f`
+> (oliva) completan la rampa de los gradientes verde → amarillo-verde.
+
 ## Estructura
 
 ```
