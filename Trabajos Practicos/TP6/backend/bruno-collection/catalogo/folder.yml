@@ -1,0 +1,7 @@
+info:
+  name: catalogo
+  type: folder
+  seq: 2
+
+request:
+  auth: inherit

@@ -1,0 +1,5 @@
+name: test
+color: "#CE4F3B"
+variables:
+  - name: URL_BASE
+    value: localhost:3001

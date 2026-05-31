@@ -1,0 +1,94 @@
+info:
+  name: Crear compra
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://{{URL_BASE}}/api/compras
+  body:
+    type: json
+    data: |
+      {
+        "fechaVisita": "2026-06-02",
+        "metodoPago": "tarjeta",
+        "tickets": [
+          { "tipoTicketId": 1, "edad": 30 },
+          { "tipoTicketId": 2, "edad": 8 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: ✅ 201 Successful response
+    request:
+      url: http://{{URL_BASE}}/api/compras
+      method: POST
+      body:
+        type: json
+        data: |
+          {
+            "fechaVisita": "2026-06-02",
+            "metodoPago": "tarjeta",
+            "tickets": [
+              { "tipoTicketId": 1, "edad": 30 },
+              { "tipoTicketId": 2, "edad": 8 }
+            ]
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: x-powered-by
+          value: Express
+        - name: access-control-allow-origin
+          value: "*"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "242"
+        - name: etag
+          value: W/"f2-Oak0b4D6ZVewm3IvTEgNsfbElDs"
+        - name: date
+          value: Sun, 31 May 2026 20:48:04 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "compraId": 10,
+            "estado": "pendiente",
+            "cantidad": 2,
+            "fechaVisita": "2026-06-02",
+            "montoTotal": 30000,
+            "metodoPago": "tarjeta",
+            "redirectUrl": "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3432218744-05e5b888-6589-48fd-928c-43eea8eb7731"
+          }
+
+docs: |
+  Tarjeta
+  {
+    "fechaVisita": "2026-06-02",
+    "metodoPago": "tarjeta",
+    "tickets": [
+      { "tipoTicketId": 1, "edad": 30 },
+      { "tipoTicketId": 2, "edad": 8 }
+    ]
+  }
+  Efectivo
+  {
+    "fechaVisita": "2026-06-02",
+    "metodoPago": "efectivo",
+    "tickets": [
+      { "tipoTicketId": 2, "edad": 25 }
+    ]
+  }

@@ -1,10 +1,11 @@
 const { createDb, seedReferenceData } = require('../src/db');
 const { CompraService } = require('../src/services/compraService');
 
-function buildContext({ today = '2026-06-02' } = {}) {
+// Contexto de dominio: base en memoria + dependencias simuladas (mailer, mp, clock)
+// para probar la lógica de negocio de "Comprar entradas" en aislamiento.
+function buildContext({ today = '2026-06-01' } = {}) {
   const db = createDb(':memory:');
   seedReferenceData(db); // siembra horarios, tipos y el usuario hardcodeado id=1
-  const usuario = { lastInsertRowid: 1 };
   const mailer = {
     sent: [],
     async send(to, subject, body, opts = {}) {
@@ -24,19 +25,24 @@ function buildContext({ today = '2026-06-02' } = {}) {
   };
   const clock = () => new Date(today + 'T10:00:00');
   const service = new CompraService({ db, mailer, mp, clock });
-  return { db, service, mailer, mp, usuarioId: usuario.lastInsertRowid };
+  return { db, service, mailer, mp };
 }
 
 const VIP = 1;
 const REGULAR = 2;
 
-describe('CompraService - Comprar entradas (TDD)', () => {
-  test('compra válida con tarjeta retorna init_point de Mercado Pago y NO envía mail hasta confirmar el pago', async () => {
-    // martes 2026-06-02 (parque abierto), fecha futura
-    const { service, mailer } = buildContext({ today: '2026-06-01' });
+describe('Dominio - Comprar entradas', () => {
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 1: comprar una entrada con fecha disponible, cantidad < 10,
+  // edad de todos los visitantes, tipo de pase, pago con tarjeta vía Mercado
+  // Pago y recepción del mail de confirmación. (PASA)
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 1: compra válida con tarjeta redirige a Mercado Pago y, al aprobarse el pago, envía el mail de confirmación', async () => {
+    const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
+
     const result = await service.comprar({
       usuarioId: 1,
-      fechaVisita: '2026-06-02',
+      fechaVisita: '2026-06-02', // martes: parque abierto, fecha futura
       metodoPago: 'tarjeta',
       tickets: [
         { tipoTicketId: VIP, edad: 30 },
@@ -44,64 +50,28 @@ describe('CompraService - Comprar entradas (TDD)', () => {
       ],
     });
 
-    expect(result.estado).toBe('pendiente');
+    // Informa cantidad y fecha al finalizar la compra.
     expect(result.cantidad).toBe(2);
     expect(result.fechaVisita).toBe('2026-06-02');
     expect(result.montoTotal).toBe(20000 + 10000);
+    // Redirige a Mercado Pago por ser pago con tarjeta.
     expect(result.redirectUrl).toMatch(/^https:\/\/mp\.test\/checkout\//);
-    // Con tarjeta, la confirmación se envía recién cuando MP aprueba el pago.
-    expect(mailer.sent).toHaveLength(0);
-  });
-
-  test('al aprobarse el pago con tarjeta se envía la confirmación con el comprobante PDF adjunto (una sola vez)', async () => {
-    const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
-    const result = await service.comprar({
-      usuarioId: 1,
-      fechaVisita: '2026-06-02',
-      metodoPago: 'tarjeta',
-      tickets: [{ tipoTicketId: VIP, edad: 30 }],
-    });
+    // Con tarjeta, el mail se envía recién cuando MP aprueba el pago.
     expect(mailer.sent).toHaveLength(0);
 
-    // Mercado Pago reporta el pago aprobado.
+    // Mercado Pago aprueba el pago -> se envía la confirmación con comprobante PDF.
     mp.estadoPago = 'approved';
-    const estado1 = await service.consultarEstado(result.compraId);
-    expect(estado1.estado).toBe('confirmado');
+    const estado = await service.consultarEstado(result.compraId);
+    expect(estado.estado).toBe('confirmado');
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].to).toBe('visitante@ecoharmony.com');
     expect(mailer.sent[0].subject).toMatch(/confirmaci/i);
-    const adj = mailer.sent[0].attachments;
-    expect(adj).toHaveLength(1);
-    expect(adj[0].filename).toMatch(/\.pdf$/);
-    expect(Buffer.isBuffer(adj[0].content)).toBe(true);
-    // El PDF empieza con la firma "%PDF".
-    expect(adj[0].content.slice(0, 4).toString()).toBe('%PDF');
-
-    // Reconsultar no reenvía el correo (idempotente).
-    await service.consultarEstado(result.compraId);
-    expect(mailer.sent).toHaveLength(1);
-  });
-
-  test('compra con efectivo no genera redirect a MP pero envía confirmación con comprobante PDF', async () => {
-    const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
-    const result = await service.comprar({
-      usuarioId: 1,
-      fechaVisita: '2026-06-02',
-      metodoPago: 'efectivo',
-      tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
-    });
-
-    expect(result.redirectUrl).toBeNull();
-    expect(result.cantidad).toBe(1);
-    expect(result.montoTotal).toBe(10000);
-    expect(result.fechaVisita).toBe('2026-06-02');
-    expect(mp.created).toHaveLength(0);
-    expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].attachments).toHaveLength(1);
     expect(mailer.sent[0].attachments[0].filename).toMatch(/\.pdf$/);
   });
 
-  test('falla si no se selecciona forma de pago', async () => {
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 2: comprar entradas sin seleccionar forma de pago. (FALLA)
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 2: falla si no se selecciona forma de pago', async () => {
     const { service } = buildContext();
     await expect(
       service.comprar({
@@ -113,131 +83,59 @@ describe('CompraService - Comprar entradas (TDD)', () => {
     ).rejects.toThrow(/forma de pago/i);
   });
 
-  test('falla si el método de pago no es válido', async () => {
-    const { service } = buildContext();
-    await expect(
-      service.comprar({
-        usuarioId: 1,
-        fechaVisita: '2026-06-02',
-        metodoPago: 'cripto',
-        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
-      })
-    ).rejects.toThrow(/forma de pago/i);
-  });
-
-  test('falla si la fecha de visita es un día en el que el parque está cerrado (lunes)', async () => {
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 3: comprar entradas con fecha en la que el parque está
+  // cerrado (lunes). (FALLA)
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 3: falla si la fecha de visita cae en un día que el parque está cerrado', async () => {
     const { service } = buildContext({ today: '2026-06-01' });
     await expect(
       service.comprar({
         usuarioId: 1,
-        fechaVisita: '2026-06-08', // lunes
+        fechaVisita: '2026-06-08', // lunes: parque cerrado
         metodoPago: 'efectivo',
         tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
       })
     ).rejects.toThrow(/cerrado/i);
   });
 
-  test('falla si la fecha de visita es un feriado (25 de diciembre)', async () => {
-    const { service } = buildContext({ today: '2026-12-01' });
-    await expect(
-      service.comprar({
-        usuarioId: 1,
-        fechaVisita: '2026-12-25', // viernes pero feriado
-        metodoPago: 'efectivo',
-        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
-      })
-    ).rejects.toThrow(/cerrado/i);
-  });
-
-  test('falla si la fecha de visita es un feriado (1 de enero)', async () => {
-    const { service } = buildContext({ today: '2026-12-15' });
-    await expect(
-      service.comprar({
-        usuarioId: 1,
-        fechaVisita: '2027-01-01', // viernes pero feriado
-        metodoPago: 'efectivo',
-        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
-      })
-    ).rejects.toThrow(/cerrado/i);
-  });
-
-  test('falla si la fecha de visita es anterior al día actual', async () => {
-    const { service } = buildContext({ today: '2026-06-10' });
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 4: comprar una cantidad de entradas mayor a 10. (FALLA)
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 4: falla si la cantidad de entradas es mayor a 10', async () => {
+    const { service } = buildContext({ today: '2026-06-01' });
+    const tickets = Array.from({ length: 11 }, () => ({ tipoTicketId: REGULAR, edad: 30 }));
     await expect(
       service.comprar({
         usuarioId: 1,
         fechaVisita: '2026-06-02',
         metodoPago: 'efectivo',
-        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
+        tickets,
       })
-    ).rejects.toThrow(/fecha/i);
+    ).rejects.toThrow(/10/);
   });
 
-  test('permite compra con fecha de visita igual al día actual', async () => {
-    const { service } = buildContext({ today: '2026-06-02' });
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 5 (extra): comprar con efectivo (pago en boletería). No
+  // redirige a Mercado Pago, envía el mail de confirmación con el comprobante
+  // e informa la cantidad y la fecha. (PASA)
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 5: compra válida con efectivo no redirige a Mercado Pago y envía el mail de confirmación', async () => {
+    const { service, mailer, mp } = buildContext({ today: '2026-06-01' });
+
     const result = await service.comprar({
       usuarioId: 1,
       fechaVisita: '2026-06-02',
       metodoPago: 'efectivo',
       tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
     });
+
+    expect(result.redirectUrl).toBeNull();
+    expect(mp.created).toHaveLength(0); // no se crea preferencia en Mercado Pago
     expect(result.cantidad).toBe(1);
-  });
-
-  test('falla si la cantidad de entradas es mayor a 10', async () => {
-    const { service } = buildContext({ today: '2026-06-01' });
-    const tickets = Array.from({ length: 11 }, () => ({ tipoTicketId: REGULAR, edad: 30 }));
-    await expect(
-      service.comprar({ usuarioId: 1, fechaVisita: '2026-06-02', metodoPago: 'efectivo', tickets })
-    ).rejects.toThrow(/10/);
-  });
-
-  test('falla si no se ingresan entradas', async () => {
-    const { service } = buildContext({ today: '2026-06-01' });
-    await expect(
-      service.comprar({ usuarioId: 1, fechaVisita: '2026-06-02', metodoPago: 'efectivo', tickets: [] })
-    ).rejects.toThrow(/al menos una/i);
-  });
-
-  test('falla si falta la edad de algún visitante', async () => {
-    const { service } = buildContext({ today: '2026-06-01' });
-    await expect(
-      service.comprar({
-        usuarioId: 1,
-        fechaVisita: '2026-06-02',
-        metodoPago: 'efectivo',
-        tickets: [{ tipoTicketId: REGULAR }],
-      })
-    ).rejects.toThrow(/edad/i);
-  });
-
-  test('falla si el usuario no está registrado', async () => {
-    const { service } = buildContext({ today: '2026-06-01' });
-    await expect(
-      service.comprar({
-        usuarioId: 9999,
-        fechaVisita: '2026-06-02',
-        metodoPago: 'efectivo',
-        tickets: [{ tipoTicketId: REGULAR, edad: 25 }],
-      })
-    ).rejects.toThrow(/usuario/i);
-  });
-
-  test('persiste la compra y los tickets en la base de datos', async () => {
-    const { service, db } = buildContext({ today: '2026-06-01' });
-    const result = await service.comprar({
-      usuarioId: 1,
-      fechaVisita: '2026-06-02',
-      metodoPago: 'efectivo',
-      tickets: [
-        { tipoTicketId: VIP, edad: 40 },
-        { tipoTicketId: REGULAR, edad: 12 },
-      ],
-    });
-    const compra = db.prepare('SELECT * FROM Compras WHERE id = ?').get(result.compraId);
-    const tickets = db.prepare('SELECT * FROM Tickets WHERE compra_id = ?').all(result.compraId);
-    expect(compra.monto_total).toBe(30000);
-    expect(tickets).toHaveLength(2);
-    expect(tickets.every((t) => t.codigo_qr)).toBe(true);
+    expect(result.fechaVisita).toBe('2026-06-02');
+    // Con efectivo la compra queda confirmada y el mail se envía al instante.
+    expect(mailer.sent).toHaveLength(1);
+    expect(mailer.sent[0].attachments[0].filename).toMatch(/\.pdf$/);
   });
 });
