@@ -1,37 +1,50 @@
-# TP6 – TDD: Comprar entradas (EcoHarmony Park)
+# 🎟️ TP6 – TDD: Comprar entradas (EcoHarmony Park)
 
 Implementación de la User Story **"Comprar entradas"** del bioparque EcoHarmony Park
 aplicando el ciclo **Red → Green → Refactor**.
 
-- **Backend:** Node.js + Express + SQLite (`better-sqlite3`) + Jest
-- **Frontend:** Vite + React + TypeScript + HeroUI + TailwindCSS + React Router
-- **Pagos:** Mercado Pago Checkout Pro (entorno de PRUEBA)
-- **Correo:** Nodemailer (Gmail / SMTP) con comprobante en PDF (`pdfkit` + `qrcode`)
+- 🟢 **Backend:** Node.js + Express + SQLite (`better-sqlite3`) + Jest
+- 🔵 **Frontend:** Vite + React + TypeScript + HeroUI + TailwindCSS + React Router
+- 💳 **Pagos:** Mercado Pago Checkout Pro (entorno de PRUEBA)
+- 📧 **Correo:** Nodemailer (Gmail / SMTP) con comprobante en PDF (`pdfkit` + `qrcode`)
 
 > **Sesión:** para esta entrega la app trabaja con un **usuario hardcodeado**
 > (id=1, `visitante@ecoharmony.com`), siempre "logueado". No hay login/registro
 > ni JWT: el frontend lo obtiene con `GET /api/me` y el backend lo usa en cada compra.
 
-## Paleta de colores
+## 📑 Índice
+
+1. [🎨 Paleta de colores](#-paleta-de-colores)
+2. [📁 Estructura](#-estructura)
+3. [🚀 Cómo levantar todo](#-cómo-levantar-todo)
+4. [📧 Correo de confirmación + comprobante PDF](#-correo-de-confirmación--comprobante-pdf)
+5. [💳 Integración con Mercado Pago](#-integración-con-mercado-pago-entorno-de-prueba)
+6. [🔌 Endpoints](#-endpoints)
+7. [💾 Esquema de Base de Datos](#-esquema-de-base-de-datos)
+8. [🔁 Ciclo TDD aplicado](#-ciclo-tdd-aplicado)
+9. [🧪 Pruebas](#-pruebas)
+10. [📝 Estilo de Código](#-estilo-de-código)
+
+## 🎨 Paleta de colores
 
 La identidad visual usa una paleta natural verde con un cálido cremoso y un rojo
 ladrillo para alertas. Vive en `frontend/src/styles/globals.css` como variables
-CSS (`--p4..--p6`, `--a5/--a6`, `--champagne`, `--brick`) y, además, sobrescribe
+CSS y, además, sobrescribe
 la escala `emerald-*` de Tailwind para que las utilidades existentes adopten la
 paleta automáticamente.
 
-| Color           | Hex       | Variable           | Uso                                                        |
-|-----------------|-----------|--------------------|------------------------------------------------------------|
-| Hunter Green    | `#386641` | `--p6`             | Verde más oscuro: extremo de gradientes, bordes, sombras   |
-| Sage Green      | `#6a994e` | `--p5` / `--accent`| Acento principal (botones, foco, indicadores)              |
-| Yellow Green    | `#a7c957` | `--a5`             | Acento vivo: brillo de gradientes de marca                 |
-| Champagne Mist  | `#f2e8cf` | `--champagne`      | Fondo cálido de la página / escenario                      |
-| Blushed Brick   | `#bc4749` | `--brick`          | Alertas y pagos rechazados                                 |
+| Color           | Hex         | Uso                                                        |
+|-----------------|-----------|------------------------------------------------------------|
+| Hunter Green    | `#386641`     | Verde más oscuro: extremo de gradientes, bordes, sombras   |
+| Sage Green      | `#6a994e` | Acento principal (botones, foco, indicadores)              |
+| Yellow Green    | `#a7c957` | Acento vivo: brillo de gradientes de marca                 |
+| Champagne Mist  | `#f2e8cf`  | Fondo cálido de la página / escenario                      |
+| Blushed Brick   | `#bc4749`  | Alertas y pagos rechazados                                 |
 
 > Verdes auxiliares derivados: `--p4 #8cb85f` (verde claro) y `--a6 #7a9e3f`
 > (oliva) completan la rampa de los gradientes verde → amarillo-verde.
 
-## Estructura
+## 📁 Estructura
 
 ```
 TP6/
@@ -66,7 +79,7 @@ TP6/
             └── pago-resultado.tsx      # Vuelta de Mercado Pago (tarjeta)
 ```
 
-## Cómo levantar todo
+## 🚀 Cómo levantar todo
 
 > Necesitás **dos terminales** (backend y frontend) y, para que la redirección
 > automática de Mercado Pago funcione, una **tercera** con el túnel de Cloudflare
@@ -113,7 +126,7 @@ MAIL_FROM=EcoHarmony Park <tu-cuenta@gmail.com>
 MAIL_TO=destino@gmail.com                # casilla que RECIBE las confirmaciones
 ```
 
-## Correo de confirmación + comprobante PDF
+## 📧 Correo de confirmación + comprobante PDF
 
 Al **confirmarse** una compra se envía un correo con el detalle y un **comprobante
 en PDF adjunto** (incluye un código QR por entrada). El disparo depende del medio:
@@ -145,7 +158,7 @@ en PDF adjunto** (incluye un código QR por entrada). El disparo depende del med
 > **SMTP propio:** en vez de Gmail podés definir `MAIL_HOST`, `MAIL_PORT` y
 > `MAIL_SECURE`; si `MAIL_HOST` está presente, se ignora `MAIL_SERVICE`.
 
-## Integración con Mercado Pago (entorno de PRUEBA)
+## 💳 Integración con Mercado Pago (entorno de PRUEBA)
 
 El pago con **tarjeta** usa **Checkout Pro** de Mercado Pago en modo TEST (SDK
 oficial `mercadopago`). El flujo es:
@@ -205,7 +218,7 @@ FRONTEND_URL=https://<random>.trycloudflare.com
   CVV `123`, vencimiento futuro. El nombre del titular define el resultado:
   `APRO` (aprobado), `OTHE` (rechazo general), `CONT` (pendiente).
 
-## Endpoints
+## 🔌 Endpoints
 
 | Método | Ruta                          | Descripción                                            |
 |--------|-------------------------------|--------------------------------------------------------|
@@ -217,20 +230,13 @@ FRONTEND_URL=https://<random>.trycloudflare.com
 | GET    | `/api/compras/:id/estado`     | Estado de la compra; sincroniza con MP y dispara el correo al confirmar. |
 | POST   | `/api/compras/webhook`        | Webhook de notificaciones de MP (opcional).            |
 
-## Esquema de Base de Datos
+## 💾 Esquema de Base de Datos
 
 El backend usa **SQLite** a través de `better-sqlite3` (síncrono). El DDL vive en
 `backend/src/db/schema.sql` y se aplica automáticamente al crear la base
 (`createDb()` en `backend/src/db/index.js`). En **tests** la base es en memoria
 (`:memory:`); en **desarrollo** persiste en `backend/data.sqlite`. Las claves
 foráneas se activan explícitamente con `PRAGMA foreign_keys = ON`.
-
-### Diagrama de relaciones
-
-```
-Usuarios ──1:N──> Compras ──1:N──> Tickets ──N:1──> TiposTicket
-                                   Horarios (catálogo de días/horas de apertura)
-```
 
 ### Tabla: Usuarios
 
@@ -314,7 +320,7 @@ CREATE TABLE IF NOT EXISTS Tickets (
 );
 ```
 
-## Ciclo TDD aplicado
+## 🔁 Ciclo TDD aplicado
 
 Cada criterio de aceptación se construyó siguiendo Red → Green → Refactor:
 
@@ -350,7 +356,7 @@ Cada criterio de aceptación se construyó siguiendo Red → Green → Refactor:
    si el envío o la generación del PDF fallan, se loguea pero **la compra ya
    persistida no se rompe**.
 
-## Pruebas
+## 🧪 Pruebas
 
 ### Cómo ejecutar los tests
 
@@ -390,13 +396,6 @@ Cubren el núcleo de negocio (`CompraService`) sin Express, con dobles en memori
 > la colección de **Bruno** (ver _Probar la API con Bruno_ más abajo), no con tests
 > automatizados de API.
 
-### Resultado actual
-
-```
-Test Suites: 1 passed, 1 total
-Tests:       5 passed, 5 total
-```
-
 ### Probar la API con Bruno
 
 En `backend/bruno-collection/` hay una colección de [Bruno](https://www.usebruno.com/)
@@ -411,17 +410,7 @@ Incluye el environment `test` (`environments/test.yml`) con la `baseUrl` apuntan
 al backend local. Abrí la carpeta `bruno-collection` desde la app de Bruno,
 seleccioná el environment `test` y ejecutá los requests.
 
-## Mapeo Pruebas de usuario del enunciado
-
-| Prueba de usuario | Cubierta por |
-|-------------------|--------------|
-| Comprar con fecha válida y tarjeta (mail al aprobar el pago) | `compra válida con tarjeta…` + `al aprobarse el pago…` + API |
-| Comprar con efectivo (mail + comprobante al registrar) | `compra con efectivo … envía confirmación con comprobante PDF` |
-| Comprar sin forma de pago (falla) | `falla si no se selecciona forma de pago` + API |
-| Fecha con parque cerrado (falla) | `falla si la fecha … cerrado` + API |
-| Más de 10 entradas (falla) | `falla si la cantidad … mayor a 10` + API |
-
-## Estilo de Código
+## 📝 Estilo de Código
 
 Convenciones que sigue el proyecto, separadas por capa:
 
@@ -438,28 +427,3 @@ Convenciones que sigue el proyecto, separadas por capa:
   columnas en **`snake_case`** (`fecha_visita`, `mp_preferencia_id`).
 - Comentarios breves en español que explican el *porqué* de una regla de negocio
   (días cerrados, feriados, idempotencia del mail), no el *qué*.
-
-### Backend (Node.js + Express)
-
-- Módulos **CommonJS** (`require` / `module.exports`).
-- **Inyección de dependencias** por constructor (`{ db, mailer, mp, clock }`) para
-  hacer el núcleo testeable sin red ni reloj real.
-- Métodos privados de la clase con prefijo **`_`** (`_validarFecha`,
-  `_cargarTipos`, `_enviarConfirmacion`).
-- **Errores tipados** (`CompraError` con `status` HTTP) en lugar de `if` por
-  mensaje en las rutas.
-- Consultas SQL con **sentencias preparadas** y parámetros posicionales (`?`),
-  nunca interpolando strings.
-
-### Frontend (React + TypeScript)
-
-- **Componentes funcionales** con Hooks (`useState`, `useEffect`, `useMemo`).
-- TypeScript con tipos explícitos para props y datos de la API.
-- El estilo lo automatiza **ESLint + Prettier** (`frontend/eslint.config.mjs`).
-  Reglas destacadas: `prettier/prettier`, orden de imports por grupos
-  (`import/order`), ordenamiento de props JSX (`react/jsx-sort-props`,
-  *callbacks* al final), componentes auto-cerrados (`react/self-closing-comp`),
-  línea en blanco antes de cada `return` y descarte de imports sin uso
-  (`unused-imports`). Verificar con `npm run lint` dentro de `frontend/`.
-- Diseño **responsive** con TailwindCSS (utilidades + paleta `emerald-*`
-  sobrescrita, ver sección *Paleta de colores*).
