@@ -3,7 +3,7 @@
 Implementación de la User Story **"Comprar entradas"** del bioparque EcoHarmony Park
 aplicando el ciclo **Red → Green → Refactor**.
 
-- **Backend:** Node.js + Express + SQLite (`better-sqlite3`) + Jest + Supertest
+- **Backend:** Node.js + Express + SQLite (`better-sqlite3`) + Jest
 - **Frontend:** Vite + React + TypeScript + HeroUI + TailwindCSS + React Router
 - **Pagos:** Mercado Pago Checkout Pro (entorno de PRUEBA)
 - **Correo:** Nodemailer (Gmail / SMTP) con comprobante en PDF (`pdfkit` + `qrcode`)
@@ -51,8 +51,7 @@ TP6/
 │   │       ├── mailer.js               # SmtpMailer (Nodemailer) + ConsoleMailer (fallback)
 │   │       └── comprobante.js          # Genera el comprobante de compra en PDF (con QR)
 │   ├── tests/
-│   │   ├── compraService.test.js       # Tests unitarios (TDD)
-│   │   └── api.test.js                 # Tests de API (supertest)
+│   │   └── compraService.test.js       # Tests unitarios de dominio (TDD)
 │   ├── .env.example                    # Variables de entorno de referencia
 │   └── data.sqlite                     # Base SQLite persistente (dev)
 └── frontend/
@@ -218,21 +217,118 @@ FRONTEND_URL=https://<random>.trycloudflare.com
 | GET    | `/api/compras/:id/estado`     | Estado de la compra; sincroniza con MP y dispara el correo al confirmar. |
 | POST   | `/api/compras/webhook`        | Webhook de notificaciones de MP (opcional).            |
 
+## Esquema de Base de Datos
+
+El backend usa **SQLite** a través de `better-sqlite3` (síncrono). El DDL vive en
+`backend/src/db/schema.sql` y se aplica automáticamente al crear la base
+(`createDb()` en `backend/src/db/index.js`). En **tests** la base es en memoria
+(`:memory:`); en **desarrollo** persiste en `backend/data.sqlite`. Las claves
+foráneas se activan explícitamente con `PRAGMA foreign_keys = ON`.
+
+### Diagrama de relaciones
+
+```
+Usuarios ──1:N──> Compras ──1:N──> Tickets ──N:1──> TiposTicket
+                                   Horarios (catálogo de días/horas de apertura)
+```
+
+### Tabla: Usuarios
+
+Para esta entrega hay un único **usuario hardcodeado** (`id = 1`,
+`visitante@ecoharmony.com`) sembrado al arrancar; no hay registro ni login real.
+
+```sql
+CREATE TABLE IF NOT EXISTS Usuarios (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  email         TEXT    NOT NULL UNIQUE,
+  contrasena    TEXT    NOT NULL,
+  nombre        TEXT    NOT NULL,
+  creado_en     TEXT    DEFAULT (datetime('now'))
+);
+```
+
+### Tabla: Horarios
+
+Catálogo de días/horas en que el parque está abierto. El seed carga **martes a
+domingo de 08:30 a 19:00**; el **lunes** no se siembra (parque cerrado).
+
+```sql
+CREATE TABLE IF NOT EXISTS Horarios (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  dia_semana    TEXT    NOT NULL CHECK(dia_semana IN ('lunes','martes','miercoles','jueves','viernes','sabado','domingo')),
+  hora_apertura TEXT    NOT NULL,
+  hora_cierre   TEXT    NOT NULL,
+  activo        INTEGER NOT NULL DEFAULT 1
+);
+```
+
+### Tabla: TiposTicket
+
+Tipos de pase disponibles. El seed carga dos: **VIP** ($20.000, acceso
+prioritario) y **Regular** ($10.000, entrada estándar).
+
+```sql
+CREATE TABLE IF NOT EXISTS TiposTicket (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre      TEXT    NOT NULL,
+  pase        TEXT    NOT NULL CHECK(pase IN ('VIP', 'regular')),
+  precio      REAL    NOT NULL,
+  descripcion TEXT
+);
+```
+
+### Tabla: Compras
+
+Cabecera de cada compra. `estado` arranca en `pendiente` y pasa a
+`confirmado`/`cancelado` (efectivo confirma al registrar; tarjeta al aprobar MP).
+`mp_preferencia_id` guarda la preferencia de Mercado Pago cuando el pago es con
+tarjeta.
+
+```sql
+CREATE TABLE IF NOT EXISTS Compras (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id        INTEGER NOT NULL REFERENCES Usuarios(id),
+  fecha_visita      TEXT    NOT NULL,
+  estado            TEXT    NOT NULL DEFAULT 'pendiente'
+                    CHECK(estado IN ('pendiente','confirmado','cancelado')),
+  metodo_pago       TEXT    NOT NULL CHECK(metodo_pago IN ('efectivo','tarjeta')),
+  monto_total       REAL    NOT NULL,
+  mp_preferencia_id TEXT,
+  creado_en         TEXT    DEFAULT (datetime('now'))
+);
+```
+
+### Tabla: Tickets
+
+Una fila por entrada/visitante dentro de una compra. `codigo_qr` es un UUID único
+que luego se embebe como QR en el comprobante PDF. La inserción de `Compras` y sus
+`Tickets` ocurre dentro de una **transacción** (no quedan compras huérfanas).
+
+```sql
+CREATE TABLE IF NOT EXISTS Tickets (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  compra_id        INTEGER NOT NULL REFERENCES Compras(id),
+  tipo_ticket_id   INTEGER NOT NULL REFERENCES TiposTicket(id),
+  edad_visitante   INTEGER NOT NULL,
+  codigo_qr        TEXT    UNIQUE
+);
+```
+
 ## Ciclo TDD aplicado
 
 Cada criterio de aceptación se construyó siguiendo Red → Green → Refactor:
 
 | # | Criterio de aceptación | Test (Red) | Implementación (Green) | Refactor |
 |---|------------------------|------------|------------------------|----------|
-| 1 | Indicar fecha, cantidad, edades y tipo de pase | `compra válida con tarjeta…` | `comprar()` con validaciones de payload | Extracción de helpers `_validarCantidad`, `_validarEdades`, `_cargarTipos` |
-| 2 | Fecha del día actual o futura | `falla si la fecha … anterior` + `permite … igual al día actual` | Inyección de `clock` y comparación a medianoche | Helper `parseFechaLocal` reutilizable |
-| 3 | Confirmación por mail con comprobante | Spy de mailer + verificación de adjunto PDF | `_enviarConfirmacion()` (efectivo al comprar, tarjeta al aprobar) genera PDF y envía | Mailer y comprobante inyectables; `ConsoleMailer` por defecto |
-| 4 | Redirigir a Mercado Pago si paga con tarjeta | `compra válida con tarjeta retorna init_point` | Llamada a `mp.createPreference` y persistencia de `mp_preferencia_id` | Cliente MP inyectable (`FakeMercadoPago` en dev) |
-| 5 | Fecha dentro de días abiertos | `falla … parque cerrado (lunes)` | Consulta a `Horarios` por `dia_semana` | Tabla `DIAS_SEMANA` + `_validarFecha` (incluye feriados) |
-| 6 | Selección de forma de pago obligatoria | `falla si no se selecciona forma de pago` + `método inválido` | Whitelist `METODOS_PAGO` | `_validarMetodoPago` |
-| 7 | Máximo 10 entradas | `falla si la cantidad … mayor a 10` | Constante `MAX_ENTRADAS = 10` | `_validarCantidad` también cubre `tickets vacíos` |
-| 8 | Informar cantidad y fecha al finalizar | `cantidad`, `fechaVisita` en `result` | Retorno enriquecido del service | DTO único usado por API y frontend |
-| 9 | Solo usuarios registrados | `falla si el usuario no está registrado` | `SELECT … FROM Usuarios WHERE id = ?` → 401 si no existe | Usuario hardcodeado (id=1) resuelto en la capa de ruta |
+| 1 | Indicar fecha, cantidad, edades y tipo de pase | Caso 1 (compra válida con tarjeta) | `comprar()` con validaciones de payload | Extracción de helpers `_validarCantidad`, `_validarEdades`, `_cargarTipos` |
+| 2 | Fecha del día actual o futura | *Sin caso dedicado en la suite actual* (validación en el service) | Inyección de `clock` y comparación a medianoche | Helper `parseFechaLocal` reutilizable |
+| 3 | Confirmación por mail con comprobante | Casos 1 y 5 (spy de mailer + adjunto PDF) | `_enviarConfirmacion()` (efectivo al comprar, tarjeta al aprobar) genera PDF y envía | Mailer y comprobante inyectables; `ConsoleMailer` por defecto |
+| 4 | Redirigir a Mercado Pago si paga con tarjeta | Caso 1 (`redirectUrl` a MP) | Llamada a `mp.createPreference` y persistencia de `mp_preferencia_id` | Cliente MP inyectable (`FakeMercadoPago` en dev) |
+| 5 | Fecha dentro de días abiertos | Caso 3 (parque cerrado, lunes) | Consulta a `Horarios` por `dia_semana` | Tabla `DIAS_SEMANA` + `_validarFecha` (incluye feriados) |
+| 6 | Selección de forma de pago obligatoria | Caso 2 (sin forma de pago) | Whitelist `METODOS_PAGO` | `_validarMetodoPago` |
+| 7 | Máximo 10 entradas | Caso 4 (cantidad mayor a 10) | Constante `MAX_ENTRADAS = 10` | `_validarCantidad` |
+| 8 | Informar cantidad y fecha al finalizar | Casos 1 y 5 (`cantidad`, `fechaVisita` en `result`) | Retorno enriquecido del service | DTO único usado por API y frontend |
+| 9 | Solo usuarios registrados | *Sin caso dedicado en la suite actual* (validación en el service) | `SELECT … FROM Usuarios WHERE id = ?` → 401 si no existe | Usuario hardcodeado (id=1) resuelto en la capa de ruta |
 
 ### Decisiones de diseño guiadas por los tests
 
@@ -244,9 +340,9 @@ Cada criterio de aceptación se construyó siguiendo Red → Green → Refactor:
    el service y se exponen uniformemente como respuestas 400/401.
 3. **SQLite en memoria** para tests (`:memory:`) → cada test arranca limpio,
    schema real y consultas reales (no se mockea la DB).
-4. **Transacción** sobre `Compras` + `Tickets`: si falla la inserción de un ticket
-   no quedan compras huérfanas. Aparece naturalmente al escribir el test
-   "persiste la compra y los tickets".
+4. **Transacción** sobre `Compras` + `Tickets`: la compra y sus tickets se
+   insertan en una sola transacción, así si falla la inserción de un ticket no
+   quedan compras huérfanas.
 5. **Validación en orden**: forma de pago → cantidad → edades → fecha → usuario.
    El orden importa porque los mensajes de error son los esperados por los tests
    de usuario del enunciado.
@@ -258,7 +354,7 @@ Cada criterio de aceptación se construyó siguiendo Red → Green → Refactor:
 
 ### Cómo ejecutar los tests
 
-Los tests son del **backend** (Jest + Supertest). No necesitan red ni credenciales:
+Los tests son del **backend** (Jest). No necesitan red ni credenciales:
 usan SQLite en memoria, un cliente de Mercado Pago fake y un mailer espía.
 
 ```bash
@@ -275,35 +371,45 @@ npx jest tests/compraService.test.js      # un archivo
 npx jest -t "efectivo"                     # solo los tests cuyo nombre matchea
 ```
 
-### Unit (`compraService.test.js`)
+### Casos de prueba (`compraService.test.js`)
 
-Cubren el núcleo de negocio sin Express:
+Cubren el núcleo de negocio (`CompraService`) sin Express, con dobles en memoria:
 
-- compra válida con tarjeta (init_point MP + total correcto, **sin** mail hasta aprobar)
-- al aprobar el pago con tarjeta se envía la confirmación con **PDF adjunto** (una sola vez)
-- compra con efectivo (sin redirect) envía confirmación con **PDF adjunto**
-- falla sin método de pago / método inválido
-- falla con día cerrado (lunes) / feriado (25 dic, 1 ene)
-- falla con fecha pasada / permite fecha igual al día actual
-- falla con más de 10 entradas / sin entradas / sin edad
-- falla con usuario no registrado
-- persistencia correcta de compra y tickets con QR
+- **Caso 1 — compra válida con tarjeta:** informa cantidad, fecha y monto total,
+  devuelve `redirectUrl` a Mercado Pago y **no** envía mail; al aprobar Mercado
+  Pago (`consultarEstado`) la compra queda `confirmado` y recién ahí envía la
+  confirmación con **PDF adjunto** (una sola vez). *(PASA)*
+- **Caso 2 — sin forma de pago:** falla si `metodoPago` está vacío. *(FALLA)*
+- **Caso 3 — parque cerrado:** falla si la fecha cae en un día cerrado (lunes). *(FALLA)*
+- **Caso 4 — más de 10 entradas:** falla si la cantidad supera `MAX_ENTRADAS`. *(FALLA)*
+- **Caso 5 — compra válida con efectivo:** no redirige a Mercado Pago (no crea
+  preferencia), informa cantidad y fecha, y envía la confirmación con **PDF
+  adjunto** al instante. *(PASA)*
 
-### Integración (`api.test.js`)
-
-Mediante supertest:
-
-- GET `/api/me` devuelve el usuario hardcodeado
-- GET `/api/tipos-ticket` lista los tipos sembrados
-- POST `/api/compras` con tarjeta devuelve `redirectUrl` (mail recién al confirmar)
-- 400 con más de 10 entradas / día cerrado / sin forma de pago
+> La verificación funcional de los **endpoints HTTP** se hace de forma manual con
+> la colección de **Bruno** (ver _Probar la API con Bruno_ más abajo), no con tests
+> automatizados de API.
 
 ### Resultado actual
 
 ```
-Test Suites: 2 passed, 2 total
-Tests:       21 passed, 21 total
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
 ```
+
+### Probar la API con Bruno
+
+En `backend/bruno-collection/` hay una colección de [Bruno](https://www.usebruno.com/)
+para ejercitar los endpoints a mano contra el backend levantado (`npm run dev`).
+Está organizada en carpetas:
+
+- **servidor** — `Health`, `Me`
+- **catalogo** — `Get Tipos Ticket`, `Get Horarios`
+- **compras** — `Crear compra`, `Get estado compra by ID`, `Webhook MercadoPago`
+
+Incluye el environment `test` (`environments/test.yml`) con la `baseUrl` apuntando
+al backend local. Abrí la carpeta `bruno-collection` desde la app de Bruno,
+seleccioná el environment `test` y ejecutá los requests.
 
 ## Mapeo Pruebas de usuario del enunciado
 
@@ -311,12 +417,49 @@ Tests:       21 passed, 21 total
 |-------------------|--------------|
 | Comprar con fecha válida y tarjeta (mail al aprobar el pago) | `compra válida con tarjeta…` + `al aprobarse el pago…` + API |
 | Comprar con efectivo (mail + comprobante al registrar) | `compra con efectivo … envía confirmación con comprobante PDF` |
-
-## Mapeo Pruebas de usuario del enunciado
-
-| Prueba de usuario | Cubierta por |
-|-------------------|--------------|
-| Comprar con fecha válida, tarjeta y mail | `compra válida con tarjeta…` + API equivalente |
 | Comprar sin forma de pago (falla) | `falla si no se selecciona forma de pago` + API |
 | Fecha con parque cerrado (falla) | `falla si la fecha … cerrado` + API |
 | Más de 10 entradas (falla) | `falla si la cantidad … mayor a 10` + API |
+
+## Estilo de Código
+
+Convenciones que sigue el proyecto, separadas por capa:
+
+### General (back y front)
+
+- **`camelCase`** para variables y funciones; **`PascalCase`** para clases
+  (`CompraService`, `CompraError`) y componentes React.
+- **`UPPER_SNAKE_CASE`** para constantes de módulo (`MAX_ENTRADAS`,
+  `METODOS_PAGO`, `DIAS_SEMANA`, `FERIADOS`).
+- Preferir **`const`** sobre `let`; evitar `var`.
+- **Arrow functions** para callbacks/handlers; funciones declaradas para utilidades
+  reutilizables.
+- Tablas de la base en **`PascalCase`** (`Usuarios`, `Compras`, `Tickets`) y
+  columnas en **`snake_case`** (`fecha_visita`, `mp_preferencia_id`).
+- Comentarios breves en español que explican el *porqué* de una regla de negocio
+  (días cerrados, feriados, idempotencia del mail), no el *qué*.
+
+### Backend (Node.js + Express)
+
+- Módulos **CommonJS** (`require` / `module.exports`).
+- **Inyección de dependencias** por constructor (`{ db, mailer, mp, clock }`) para
+  hacer el núcleo testeable sin red ni reloj real.
+- Métodos privados de la clase con prefijo **`_`** (`_validarFecha`,
+  `_cargarTipos`, `_enviarConfirmacion`).
+- **Errores tipados** (`CompraError` con `status` HTTP) en lugar de `if` por
+  mensaje en las rutas.
+- Consultas SQL con **sentencias preparadas** y parámetros posicionales (`?`),
+  nunca interpolando strings.
+
+### Frontend (React + TypeScript)
+
+- **Componentes funcionales** con Hooks (`useState`, `useEffect`, `useMemo`).
+- TypeScript con tipos explícitos para props y datos de la API.
+- El estilo lo automatiza **ESLint + Prettier** (`frontend/eslint.config.mjs`).
+  Reglas destacadas: `prettier/prettier`, orden de imports por grupos
+  (`import/order`), ordenamiento de props JSX (`react/jsx-sort-props`,
+  *callbacks* al final), componentes auto-cerrados (`react/self-closing-comp`),
+  línea en blanco antes de cada `return` y descarte de imports sin uso
+  (`unused-imports`). Verificar con `npm run lint` dentro de `frontend/`.
+- Diseño **responsive** con TailwindCSS (utilidades + paleta `emerald-*`
+  sobrescrita, ver sección *Paleta de colores*).
