@@ -89,4 +89,4 @@ Cada línea base es marcada mediante un **tag de Git** en el repositorio y utili
 | v1.0 | `v1.0` | 14/04/2026 | Línea base inicial del repositorio para el TP evaluable 4 |
 | v1.1 | `v1.1` | 26/05/2026 | Corrección del repositorio en base a la retroalimentación de la entrega del TP evaluable 4. |
 | v2.0 | `v2.0` | 27/05/2026 | Linea base creada por la entrega/ realizacion del TP evaluable 7. |
-
+| v3.0 | `v3.0` | 02/06/2026 | Linea base creada por la entrega del TP evaluable 6 (TDD). |
