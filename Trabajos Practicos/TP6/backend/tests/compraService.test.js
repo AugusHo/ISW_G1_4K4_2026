@@ -53,7 +53,8 @@ describe('Dominio - Comprar entradas', () => {
     // Informa cantidad y fecha al finalizar la compra.
     expect(result.cantidad).toBe(2);
     expect(result.fechaVisita).toBe('2026-06-02');
-    expect(result.montoTotal).toBe(20000 + 10000);
+    // VIP adulto (30) paga completo; Regular de 8 años tiene 50% off por edad.
+    expect(result.montoTotal).toBe(20000 + 10000 * 0.5);
     // Redirige a Mercado Pago por ser pago con tarjeta.
     expect(result.redirectUrl).toMatch(/^https:\/\/mp\.test\/checkout\//);
     // Con tarjeta, el mail se envía recién cuando MP aprueba el pago.
@@ -137,5 +138,43 @@ describe('Dominio - Comprar entradas', () => {
     // Con efectivo la compra queda confirmada y el mail se envía al instante.
     expect(mailer.sent).toHaveLength(1);
     expect(mailer.sent[0].attachments[0].filename).toMatch(/\.pdf$/);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 6: precios diferenciados por edad (aclaración de la clienta).
+  //  - ≤3 años: gratis. - ≤15 años: 50% off. - ≥60 años: 50% off. - Resto: full.
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 6: aplica los descuentos por edad al calcular el monto total', async () => {
+    const { service } = buildContext({ today: '2026-06-01' });
+
+    const result = await service.comprar({
+      usuarioId: 1,
+      fechaVisita: '2026-06-02',
+      metodoPago: 'efectivo',
+      tickets: [
+        { tipoTicketId: REGULAR, edad: 3 },  // gratis
+        { tipoTicketId: REGULAR, edad: 15 }, // 50% off -> 5000
+        { tipoTicketId: REGULAR, edad: 60 }, // 50% off -> 5000
+        { tipoTicketId: REGULAR, edad: 30 }, // full -> 10000
+      ],
+    });
+
+    expect(result.montoTotal).toBe(0 + 5000 + 5000 + 10000);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Caso de Prueba 7: la edad de compra permitida es 0 a 99 años (la clienta
+  // aclaró que no hay edad máxima de venta distinta). 100 años es inválido.
+  // ──────────────────────────────────────────────────────────────────────────
+  test('Caso de Prueba 7: rechaza una edad fuera del rango permitido (0 a 99)', async () => {
+    const { service } = buildContext({ today: '2026-06-01' });
+    await expect(
+      service.comprar({
+        usuarioId: 1,
+        fechaVisita: '2026-06-02',
+        metodoPago: 'efectivo',
+        tickets: [{ tipoTicketId: REGULAR, edad: 100 }],
+      })
+    ).rejects.toThrow(/edad/i);
   });
 });

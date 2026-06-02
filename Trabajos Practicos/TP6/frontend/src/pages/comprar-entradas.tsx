@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { ARS, fmtISOLong, toISO } from '../lib/format';
+import { precioConDescuento, descuentoPorEdad, EDAD_MIN, EDAD_MAX } from '../lib/precios';
 import { useVista } from '../lib/vista';
 import { Calendar } from '../components/ui';
 import mpLogo from '../assets/MercadoPago.png';
@@ -92,7 +93,10 @@ export default function ComprarEntradas() {
   }, [horarios]);
   const tipoById = useMemo(() => Object.fromEntries(tipos.map((t) => [String(t.id), t])), [tipos]);
   const tipoBarato = useMemo(() => [...tipos].sort((a, b) => a.precio - b.precio)[0], [tipos]);
-  const total = tickets.reduce((acc, t) => acc + (tipoById[t.tipoTicketId]?.precio ?? 0), 0);
+  // Precio final de cada visitante = precio del pase con el descuento por edad aplicado.
+  const precioTicket = (t: TicketForm) =>
+    precioConDescuento(tipoById[t.tipoTicketId]?.precio ?? 0, t.edad);
+  const total = tickets.reduce((acc, t) => acc + precioTicket(t), 0);
   const esTarjeta = metodoPago === 'tarjeta';
   const fechaISO = fecha ? toISO(fecha) : '';
 
@@ -121,8 +125,8 @@ export default function ComprarEntradas() {
     if (cantidad < 1 || cantidad > 10) e.visitantes = 'La cantidad debe estar entre 1 y 10 entradas.';
     for (const [i, t] of tickets.entries()) {
       if (!t.tipoTicketId) { e.visitantes = `Elegí el tipo de pase del visitante #${i + 1}.`; break; }
-      if (t.edad == null || Number.isNaN(t.edad) || t.edad < 0 || t.edad > 120) {
-        e.visitantes = `Completá una edad válida (0–120) para el visitante #${i + 1}.`; break;
+      if (t.edad == null || Number.isNaN(t.edad) || t.edad < EDAD_MIN || t.edad > EDAD_MAX) {
+        e.visitantes = `Completá una edad válida (${EDAD_MIN}–${EDAD_MAX}) para el visitante #${i + 1}.`; break;
       }
     }
     if (!metodoPago) e.pago = 'Seleccioná una forma de pago.';
@@ -260,6 +264,14 @@ export default function ComprarEntradas() {
             );
           })}
         </div>
+        <Alert status="accent" className="mt-3">
+          <Alert.Indicator><Info className="size-4" /></Alert.Indicator>
+          <Alert.Content>
+            <Alert.Description>
+              Descuentos por edad: <b>menores o iguales a 3 años</b> no pagan; <b>menores o iguales a 15 años</b> y <b>mayores o iguales a 60 años</b> abonan el <b>50%</b>. El precio se ajusta automáticamente con la edad de cada visitante.
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
       </Seccion>
 
       {/* 3 · Cantidad y visitantes */}
@@ -283,8 +295,7 @@ export default function ComprarEntradas() {
                 <div className="ml-auto">
                   <NumberField
                     value={t.edad ?? Number.NaN}
-                    minValue={0}
-                    maxValue={120}
+                    minValue={EDAD_MIN}
                     onChange={(v) => setTicket(i, { edad: Number.isNaN(v) ? null : v })}
                   >
                     <Label className="sr-only">Edad del visitante {i + 1}</Label>
@@ -294,6 +305,9 @@ export default function ComprarEntradas() {
                       <NumberField.IncrementButton />
                     </NumberField.Group>
                   </NumberField>
+                  {t.edad != null && t.edad > EDAD_MAX && (
+                    <p className="mt-1 text-[11.5px] font-medium text-danger">La edad máxima es {EDAD_MAX} años.</p>
+                  )}
                 </div>
               </div>
               <RadioGroup
@@ -312,6 +326,17 @@ export default function ComprarEntradas() {
                   </Radio>
                 ))}
               </RadioGroup>
+              {t.tipoTicketId && descuentoPorEdad(t.edad) > 0 && (
+                <p className="mt-2 text-[12px] font-medium text-emerald-700">
+                  {descuentoPorEdad(t.edad) === 1
+                    ? 'Entrada gratis (menor o igual a 3 años)'
+                    : `${Math.round(descuentoPorEdad(t.edad) * 100)}% off por edad`}
+                  {' · '}
+                  <span className="text-muted line-through">{ARS(tipoById[t.tipoTicketId]?.precio ?? 0)}</span>
+                  {' '}
+                  <span className="font-bold">{ARS(precioTicket(t))}</span>
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -366,10 +391,16 @@ export default function ComprarEntradas() {
             <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto text-[13px]">
               {tickets.map((t, i) => {
                 const tipo = tipoById[t.tipoTicketId];
+                const dto = descuentoPorEdad(t.edad);
                 return (
                   <li key={i} className="flex items-center justify-between gap-3">
-                    <span className="text-muted">Visitante {i + 1} · {tipo?.nombre} · {t.edad} años</span>
-                    <span className="font-medium">{ARS(tipo?.precio ?? 0)}</span>
+                    <span className="text-muted">
+                      Visitante {i + 1} · {tipo?.nombre} · {t.edad} años
+                      {dto > 0 && (
+                        <span className="text-emerald-700"> · {dto === 1 ? 'gratis' : `${Math.round(dto * 100)}% off`}</span>
+                      )}
+                    </span>
+                    <span className="font-medium">{ARS(precioTicket(t))}</span>
                   </li>
                 );
               })}

@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
+const { precioConDescuento, descuentoPorEdad } = require('./precios');
 
 const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
 
@@ -122,11 +123,20 @@ async function generarComprobantePDF({ compra, tickets, usuario }) {
     doc.image(qrBuffers[i], left + 12, y + 12, { width: 96, height: 96 });
 
     const tx = left + 130;
+    // Precio final del visitante según su edad (descuentos por edad).
+    const precioFinal = precioConDescuento(t.tipo_precio, t.edad_visitante);
+    const dto = descuentoPorEdad(t.edad_visitante);
+    const detallePrecio =
+      dto === 1
+        ? 'Precio: Gratis (menor de 3 años)'
+        : dto > 0
+          ? `Precio: ${formatearMonto(precioFinal)} (${Math.round(dto * 100)}% off por edad)`
+          : `Precio: ${formatearMonto(precioFinal)}`;
     doc.fillColor(VERDE_CLARO).font('Helvetica-Bold').fontSize(10).text(`ENTRADA ${i + 1}`, tx, y + 16);
     doc.fillColor('#2b2f29').font('Helvetica-Bold').fontSize(15).text(`Pase ${t.tipo_nombre}`, tx, y + 32);
     doc.fillColor(GRIS).font('Helvetica').fontSize(11)
       .text(`Edad del visitante: ${t.edad_visitante} años`, tx, y + 56)
-      .text(`Precio: ${formatearMonto(t.tipo_precio)}`, tx, y + 74);
+      .text(detallePrecio, tx, y + 74);
     doc.fillColor('#9aa097').fontSize(8).text(`Código: ${t.codigo_qr}`, tx, y + 96, { width: width - 140 });
 
     y += alto + 14;

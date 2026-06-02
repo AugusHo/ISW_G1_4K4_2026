@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { generarComprobantePDF, formatearFecha, formatearMonto } = require('./comprobante');
+const { precioConDescuento, EDAD_MIN, EDAD_MAX } = require('./precios');
 
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const METODOS_PAGO = ['efectivo', 'tarjeta'];
@@ -44,7 +45,12 @@ class CompraService {
     if (!usuario) throw new CompraError('Usuario no registrado', 401);
 
     const tipos = this._cargarTipos(tickets);
-    const montoTotal = tickets.reduce((acc, t) => acc + tipos[t.tipoTicketId].precio, 0);
+    // El precio de cada entrada depende del tipo de pase y de la edad del
+    // visitante (descuentos por edad, ver services/precios.js).
+    const montoTotal = tickets.reduce(
+      (acc, t) => acc + precioConDescuento(tipos[t.tipoTicketId].precio, t.edad),
+      0
+    );
 
     const trx = this.db.transaction(() => {
       const insertCompra = this.db.prepare(
@@ -71,7 +77,7 @@ class CompraService {
           title: `Entrada ${tipo.nombre} - EcoHarmony Park`,
           description: `Visitante #${i + 1} (edad ${t.edad}) · visita ${fechaVisita}`,
           quantity: 1,
-          unit_price: tipo.precio,
+          unit_price: precioConDescuento(tipo.precio, t.edad),
         };
       });
       const pref = await this.mp.createPreference({ id: compraId, montoTotal, items, payer: usuario, fechaVisita });
@@ -215,8 +221,8 @@ class CompraService {
       if (t.edad === undefined || t.edad === null || Number.isNaN(Number(t.edad))) {
         throw new CompraError(`Debe indicar la edad del visitante #${i + 1}`);
       }
-      if (Number(t.edad) < 0 || Number(t.edad) > 120) {
-        throw new CompraError(`La edad del visitante #${i + 1} es inválida`);
+      if (Number(t.edad) < EDAD_MIN || Number(t.edad) > EDAD_MAX) {
+        throw new CompraError(`La edad del visitante #${i + 1} debe estar entre ${EDAD_MIN} y ${EDAD_MAX} años`);
       }
     });
   }
