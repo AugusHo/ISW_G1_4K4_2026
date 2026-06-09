@@ -31,6 +31,8 @@
     ├── Trabajos de Investigacion Grupal/
     |
     ├── Trabajos Practicos/
+    |   ├── Ejercicios de Estudio/
+    |   |
     |   ├── Guias/
     |   |
     |   ├── TP1/
@@ -58,6 +60,7 @@
 | Trabajos practicos                   | TP&lt;N&gt;\_&lt;M&gt;\_&lt;Nombre_Tema&gt;\_&lt;TipoResolucion&gt;.&lt;Extension&gt;  | ISW_G1_4K4_2026/Trabajos practicos/TP&lt;N&gt;    |
 | Lineamientos                         | Lineamientos_para_trabajos_de_investigacion.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
 | Charla TED                           | Planilla_Charla_TED.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
+| Ejercicios de Estudio                | Ejercicio_de_estudio_N                 | ISW_G1_4K4_2026/Trabajos Practicos/Ejerciccios de Estudio    |
 
 ## Glosario
 | Sigla                                      | Significado                                                                                              |
