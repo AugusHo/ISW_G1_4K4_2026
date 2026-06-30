@@ -53,14 +53,14 @@
 | Cronograma de cursada                | Cronograma_ISW_2026.pdf                          | ISW_G1_4K4_2026/                                                     |
 | Presentaciones teóricas              | PRE_&lt;N&gt;_&lt;Nombre_Presentacion&gt;.pdf            | ISW_G1_4K4_2026/Materiales de Clase/Presentaciones Teóricas/         |
 | Bibliografia                         | &lt;Nombre_Tema&gt;-&lt;Nombre_Material&gt;-&lt;Nombre_Autor&gt;.pdf      | ISW_G1_4K4_2026/Materiales de Clase/Bibliografia/    |
-| Templates                            | Template_&lt;Especifiacion&gt;.&lt;Extension&gt;      | ISW_G1_4K4_2026/Materiales de Clase/Templates/    |
+| Templates                            | Template_&lt;Especificacion&gt;.&lt;Extension&gt;      | ISW_G1_4K4_2026/Materiales de Clase/Templates/    |
 | Temas de parciales                   | Temas_de_Parciales_ISW_2026.pdf                  | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Clases grabadas                      | Clase_Grabadas_ISW_2021.&lt;Extension&gt;                 | ISW_G1_4K4_2026/Materiales de Clase/    |
 | Guia de ejercicios                   | Guia_&lt;Nombre_Tema&gt;.pdf                | ISW_G1_4K4_2026/Trabajos Practicos/Guias    |
-| Trabajos practicos                   | TP&lt;N&gt;\_&lt;M&gt;\_&lt;Nombre_Tema&gt;\_&lt;TipoResolucion&gt;.&lt;Extension&gt;  | ISW_G1_4K4_2026/Trabajos practicos/TP&lt;N&gt;    |
+| Trabajos practicos                   | TP&lt;N&gt;\_&lt;M&gt;\_&lt;Nombre_Tema&gt;\_&lt;TipoResolucion&gt;.&lt;Extension&gt;  | ISW_G1_4K4_2026/Trabajos Practicos/TP&lt;N&gt;    |
 | Lineamientos                         | Lineamientos_para_trabajos_de_investigacion.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
 | Charla TED                           | Planilla_Charla_TED.pdf                | ISW_G1_4K4_2026/Trabajos de Investigacion Grupal    |
-| Ejercicios de Estudio                | Ejercicio_de_estudio_&lt;N&gt;.pdf                 | ISW_G1_4K4_2026/Trabajos Practicos/Ejerciccios de Estudio    |
+| Ejercicios de Estudio                | Ejercicio_de_estudio_&lt;N&gt;.&lt;Extension&gt;                 | ISW_G1_4K4_2026/Trabajos Practicos/Ejercicios de Estudio    |
 
 ## Glosario
 | Sigla                                      | Significado                                                                                              |
@@ -73,7 +73,7 @@
 | &lt;Especificacion&gt;      | 	Especificación/tema al que esta dirigido el template              |
 | &lt;Extension&gt;           |     Nombre de la extensión del archivo, puede estar en diferentes formatos. Ejemplo: .doc, .jpg, .jpeg, .xlsx, .css, .html, .js, etc.              |
 | &lt;M&gt;                   | 	Número incremental que identifica la versión de un mismo Item de Configuración dentro de un Trabajo Práctico. Ej: 01, 02, etc.            |
-| &lt;TipoResolucion&gt;      | 	Nombre que idenifica el tipo de resolucion de la actividad, siendo posible 3 valores: ResolucionPropia, ResolucionDeClase o ResolucionGrupal            |
+| &lt;TipoResolucion&gt;      | 	Nombre que identifica el tipo de resolucion de la actividad, siendo posible 3 valores: ResolucionPropia, ResolucionDeClase o ResolucionGrupal            |
 | ISW                         | 	Ingeniería y Calidad de Software              |
 | TP                          | 	Trabajo Practico                |
 | TED                         | 	Tecnología Entretenimiento y Diseño              |
@@ -95,4 +95,4 @@ Cada línea base es marcada mediante un **tag de Git** en el repositorio y utili
 | v3.0 | `v3.0` | 02/06/2026 | Linea base creada por la entrega del TP evaluable 6 (TDD). |
 | v4.0 | `v4.0` | 09/06/2026 | Linea base creada por la entrega / realización del TP evaluable 10 (Kanban) |
 | v5.0 | `v5.0` | 17/06/2026 | Linea base creada por la entrega / realización del TP evaluable 13 (Dinamica de Retrospectiva) |
-| v6.0 | `v6.0` | 28/06/2026 | Linea base creada por la entrega / realización del TP evaluable 15 (Desing Thinking) |
+| v6.0 | `v6.0` | 28/06/2026 | Linea base creada por la entrega / realización del TP evaluable 15 (Design Thinking) |
