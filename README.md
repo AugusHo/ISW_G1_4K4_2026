@@ -142,6 +142,7 @@ Cada línea base se marca mediante un **tag de Git** en el repositorio y utiliza
 | `v4.0` | `v4.0` | 09/06/2026 | Línea base creada por la entrega/realización del TP evaluable 10 (Kanban). |
 | `v5.0` | `v5.0` | 17/06/2026 | Línea base creada por la entrega/realización del TP evaluable 13 (Dinámica de Retrospectiva). |
 | `v6.0` | `v6.0` | 28/06/2026 | Línea base creada por la entrega/realización del TP evaluable 15 (Design Thinking). |
+| `v7.0` | `v7.0` | 30/06/2026 | Línea base creada por la entrega del TP evaluable 5 (Uso de Repositorio). |
 
 ---
 
